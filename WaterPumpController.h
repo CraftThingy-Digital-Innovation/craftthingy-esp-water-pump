@@ -12,13 +12,29 @@ public:
           _lastRawState(HIGH), _debouncedState(HIGH), _lastStateChangeMs(0), _debounceDelayMs(2000) {} // 2s debounce for water ripples
 
     void setup() override {
-        DeviceConfig& cfg = ConfigStore::get();
-        if (cfg.gpioRelay >= 0) {
-            _relayPin = (uint8_t)cfg.gpioRelay;
+        // Determine intelligent board-specific defaults
+        const HardwareFingerprint& fp = ModuleDetector::getFingerprint();
+        uint8_t defaultRelay = 0;   // Default for ESP-01 / ESP-01S
+        uint8_t defaultSensor = 2;  // Default for ESP-01 / ESP-01S
+
+        if (fp.chipType == CHIP_ESP8266_GENERIC) {
+            defaultRelay = 5;  // D1
+            defaultSensor = 4; // D2
+        } else if (fp.chipType == CHIP_ESP32_ORIGINAL || fp.chipType == CHIP_ESP32_S3) {
+            defaultRelay = 18;
+            defaultSensor = 19;
         }
-        if (cfg.gpioSensor >= 0) {
-            _levelSensorPin = (uint8_t)cfg.gpioSensor;
-        }
+
+        // Register roles with global PinManager
+        PinManager::registerRole("relay", "Water Pump Relay", defaultRelay, PIN_CAP_OUTPUT);
+        PinManager::registerRole("sensor", "Water Level Float Sensor", defaultSensor, PIN_CAP_INPUT);
+
+        // Fetch persisted pin assignments from ConfigStore / EEPROM
+        int8_t configuredRelay = PinManager::getPin("relay");
+        int8_t configuredSensor = PinManager::getPin("sensor");
+
+        if (configuredRelay >= 0) _relayPin = (uint8_t)configuredRelay;
+        if (configuredSensor >= 0) _levelSensorPin = (uint8_t)configuredSensor;
 
         pinMode(_relayPin, OUTPUT);
         setRelay(false);
