@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version tag (e.g. v1.0.1)'
+        description: 'Release version tag (e.g. v1.0.0)'
         required: true
         default: 'v1.0.0'
 
@@ -18,9 +18,10 @@ permissions:
 
 jobs:
   build:
+    name: Build Water Pump Firmware & Release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Checkout Source Code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -30,19 +31,19 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install PlatformIO
+      - name: Install PlatformIO Core
         run: |
           python -m pip install --upgrade pip
           pip install platformio
 
-      - name: Build All Targets
+      - name: Build All Board Targets
         run: |
           pio run -e esp01_1m
           pio run -e esp32dev
           pio run -e esp32s3
           pio run -e esp32c3
 
-      - name: Package Release Assets
+      - name: Package Firmware Binaries & Calculate Hashes
         run: |
           mkdir -p release_assets
           cp .pio/build/esp01_1m/firmware.bin release_assets/firmware-water_pump-esp01s.bin
@@ -55,21 +56,60 @@ jobs:
             sha256sum "$f" > "${f}.sha256"
           done
 
-      - name: Determine Target Tag
-        id: tag_info
+      - name: Determine Target Tag & Generate Rich Release Notes
+        id: release_meta
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "tag=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            TAG="${{ inputs.version }}"
           elif [ "${{ github.event_name }}" = "release" ]; then
-            echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+            TAG="${{ github.event.release.tag_name }}"
           else
-            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            TAG="${GITHUB_REF#refs/tags/}"
           fi
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
 
-      - name: Create or Update GitHub Release
+          cat << EOF > release_notes.md
+          ## 💧 CraftThingy Water Pump Controller - ${TAG}
+
+          Official production release of the automated Water Pump Controller module for the **CraftThingy Digital Innovation** ecosystem.
+
+          ### 📦 Pre-Compiled Firmware Binaries
+          Download the appropriate binary matching your hardware target:
+
+          | Target Board | Architecture | Asset Name | Checksum |
+          |---|---|---|---|
+          | **ESP-01 / ESP-01S** | ESP8266EX (1MB Flash, DOUT) | \`firmware-water_pump-esp01s.bin\` | \`.sha256\` |
+          | **ESP32 Standard** | Dual-Core Xtensa | \`firmware-water_pump-esp32.bin\` | \`.sha256\` |
+          | **ESP32-S3** | Dual-Core Xtensa | \`firmware-water_pump-esp32s3.bin\` | \`.sha256\` |
+          | **ESP32-C3** | Single-Core RISC-V | \`firmware-water_pump-esp32c3.bin\` | \`.sha256\` |
+
+          ---
+
+          ### 🛡️ Features Included in this Release
+          - **Autonomous Water Level Regulation**: Real-time float switch and water level sensing.
+          - **Dry-Run Protection**: Automatic shutdown and alarm if water level fails to rise within safety timeout.
+          - **REST API Control**: External controllers can monitor status, force start, emergency interrupt, or reset safety alarms.
+          - **Zero-Debris OTA Switching**: Self-updates or changes roles cleanly in-place.
+
+          ---
+
+          ### ⚡ Installation
+          To switch a connected ESP running \`craftthingy-esp-core-ota\` to this module via API:
+          \`\`\`bash
+          python tools/craftthingy_esp_ctl.py set-github --host 192.168.4.1 \\
+            --org "CraftThingy-Digital-Innovation" \\
+            --ctrl "craftthingy-esp-water-pump" \\
+            --role "water_pump" \\
+            --key "<CURRENT_KEY>"
+          \`\`\`
+          EOF
+
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.tag_info.outputs.tag }}
+          name: "CraftThingy Water Pump Controller ${{ steps.release_meta.outputs.tag }}"
+          tag_name: ${{ steps.release_meta.outputs.tag }}
+          body_path: release_notes.md
           files: release_assets/*
           generate_release_notes: true
         env:
