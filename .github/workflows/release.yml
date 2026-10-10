@@ -26,6 +26,17 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Checkout Core OTA Framework
+        uses: actions/checkout@v4
+        with:
+          repository: CraftThingy-Digital-Innovation/craftthingy-esp-core-ota
+          path: .core_ota_repo
+
+      - name: Link Core Framework Directory
+        run: |
+          mkdir -p ../craftthingy-esp-core-ota
+          cp -r .core_ota_repo/* ../craftthingy-esp-core-ota/
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -76,12 +87,12 @@ jobs:
           ### 📦 Pre-Compiled Firmware Binaries
           Download the appropriate binary matching your hardware target:
 
-          | Target Board | Architecture | Asset Name | Checksum |
-          |---|---|---|---|
-          | **ESP-01 / ESP-01S** | ESP8266EX (1MB Flash, DOUT) | \`firmware-water_pump-esp01s.bin\` | \`.sha256\` |
-          | **ESP32 Standard** | Dual-Core Xtensa | \`firmware-water_pump-esp32.bin\` | \`.sha256\` |
-          | **ESP32-S3** | Dual-Core Xtensa | \`firmware-water_pump-esp32s3.bin\` | \`.sha256\` |
-          | **ESP32-C3** | Single-Core RISC-V | \`firmware-water_pump-esp32c3.bin\` | \`.sha256\` |
+          | Target Board | Architecture | Flash Size / Mode | Asset Name | Checksum |
+          |---|---|---|---|---|
+          | **ESP-01 / ESP-01S** | ESP8266EX | 1MB / DOUT (512K+512K OTA) | \`firmware-water_pump-esp01s.bin\` | \`.sha256\` |
+          | **ESP32 Standard** | Dual-Core Xtensa | 4MB+ / DIO (OTA) | \`firmware-water_pump-esp32.bin\` | \`.sha256\` |
+          | **ESP32-S3** | Dual-Core Xtensa | 8MB / QIO (OTA) | \`firmware-water_pump-esp32s3.bin\` | \`.sha256\` |
+          | **ESP32-C3** | Single-Core RISC-V | 4MB / DIO (OTA) | \`firmware-water_pump-esp32c3.bin\` | \`.sha256\` |
 
           ---
 
@@ -93,7 +104,9 @@ jobs:
 
           ---
 
-          ### ⚡ Installation
+          ### ⚡ Installation & Flashing Instructions
+
+          #### 1. Over-The-Air (OTA) Switching from Core Firmware
           To switch a connected ESP running \`craftthingy-esp-core-ota\` to this module via API:
           \`\`\`bash
           python tools/craftthingy_esp_ctl.py set-github --host 192.168.4.1 \\
@@ -101,6 +114,23 @@ jobs:
             --ctrl "craftthingy-esp-water-pump" \\
             --role "water_pump" \\
             --key "<CURRENT_KEY>"
+          \`\`\`
+
+          #### 2. First-Time USB Flashing (\`flash_tool.py\`)
+          \`\`\`bash
+          # Probe connected board
+          python tools/flash_tool.py probe
+
+          # Flash ESP-01 / ESP-01S
+          python tools/flash_tool.py flash --bin firmware-water_pump-esp01s.bin
+          \`\`\`
+
+          ---
+
+          ### 🔐 Security & Integrity
+          All binaries include companion \`.sha256\` checksum files. Verify integrity before flashing:
+          \`\`\`bash
+          sha256sum -c firmware-water_pump-esp01s.bin.sha256
           \`\`\`
           EOF
 
