@@ -1,16 +1,16 @@
 #include <Arduino.h>
 #include <CraftThingyCore.h>
-#include <controllers/WaterPumpController.h>
+#include "WaterPumpController.h"
 
 // Hardware Pin Assignment:
 // - ESP8266 (ESP-01 / ESP-01S):
 //   GPIO 0 -> Relay (Active LOW on standard ESP-01 relay shields)
-//   GPIO 2 -> Float Switch / Water Level Sensor
+//   GPIO 3 (RX pin) or GPIO 2 -> Float Switch / Water Level Sensor
 // - ESP32:
 //   GPIO 23 -> Relay
 //   GPIO 22 -> Float Switch / Water Level Sensor
 #if defined(ESP8266)
-    static WaterPumpController pumpController(0, 2, true);
+    static WaterPumpController pumpController(0, 3, true);
 #else
     static WaterPumpController pumpController(23, 22, true);
 #endif

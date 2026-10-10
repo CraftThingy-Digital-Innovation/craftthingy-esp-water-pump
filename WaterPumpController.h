@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
-#include "../DeviceController.h"
+#include <CraftThingyCore.h>
 
 class WaterPumpController : public IDeviceController {
 public:
