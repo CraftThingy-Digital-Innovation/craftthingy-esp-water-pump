@@ -83,29 +83,44 @@ If the water source runs dry or a pipe bursts, a pump running continuously will 
 
 ---
 
-## 🌐 REST API Control
+## 🌐 Standardized REST API Control (`v1`, Port 80)
 
-The pump controller responds to REST API requests on port 80:
+All endpoints require **authentication** (HMAC-SHA256 signature or Bearer token) for physical electrical safety. Responses are wrapped in a standard JSend envelope:
 
-### 1. Check Pump Status (`GET /api/status`)
-Returns tank status, pump state, run duration, and safety trip flags:
+### 1. Check Pump Telemetry (`GET /api/v1/device/status` or `/api/v1/pump/status`)
+Returns tank fill demand, debounced float sensor state, active mode, runtime, and safety alarms:
 ```json
 {
-  "activeRole": "water_pump",
-  "pumpState": "running",
-  "autoMode": true,
-  "dryRunAlarm": false,
-  "tankEmpty": true,
-  "runDurationSec": 42
+  "status": "success",
+  "code": 200,
+  "uptime": 1240,
+  "data": {
+    "role": "water_pump",
+    "pumpRunning": true,
+    "interrupted": false,
+    "autoMode": true,
+    "tankDemandsFill": true,
+    "dryRunAlarm": false,
+    "runDurationSec": 42,
+    "maxRunTimeSec": 900
+  }
 }
 ```
 
-### 2. Command Execution via REST API
-Send authenticated `POST /api/config` or use the browser dashboard [`tools/esp_manager.html`](file:///d:/CraftThingy/esp-stuff/tools/esp_manager.html):
-- Turn pump **ON** manually.
-- Turn pump **OFF** manually.
-- Restore **AUTO** mode.
-- Reset the dry-run safety alarm.
+### 2. Send Control Command (`POST /api/v1/device/command` or `/api/v1/pump/command`)
+Send authenticated POST command via Python CLI or zero-install browser dashboard [`tools/esp_manager.html`](file:///d:/CraftThingy/esp-stuff/tools/esp_manager.html):
+
+```json
+{
+  "cmd": "interrupt"
+}
+```
+
+Supported Commands:
+- `interrupt` (or `stop`, `off`): **EMERGENCY STOP**. Instantly disengages the pump relay and locks auto-mode off until explicitly resumed.
+- `start` (or `on`): Manually forces the pump relay ON (switches to manual mode).
+- `auto` (or `resume`): Resumes autonomous float switch hysteresis filling.
+- `reset_safety`: Resets the 15-minute dry-run safety lockout alarm.
 
 ---
 
