@@ -36,24 +36,31 @@ TERMS OF USE, MODIFICATION, AND LICENSING:
    d. Forking or rebranding the codebase DOES NOT exempt, waive, or diminish any commercial royalty
       obligations specified in Section 3 below.
 
-3. ENTERPRISE & COMMERCIAL REVENUE ROYALTY OBLIGATION:
-   a. FLAT PER-UNIT HARDWARE ROYALTY:
-      Any commercial enterprise, manufacturer, corporation, or high-revenue business that
-      produces, manufactures, flashes, bundles, or sells physical hardware devices utilizing
-      this software (or any fork/derivative thereof) IS REQUIRED to pay a flat intellectual
-      property royalty fee of IDR 5,000 (approx. USD $0.35) per hardware unit produced or
-      distributed (or as mutually negotiated in a written agreement).
-   b. PAYMENT & REPORTING SCHEDULE (QUARTERLY):
-      Royalty statements and payments must be settled quarterly (every 3 months, covering
-      calendar quarters ending March, June, September, and December), paid within thirty (30)
-      calendar days following the close of each quarter.
-   c. PROJECT / SINGLE-SITE INDUSTRIAL INSTALLATIONS:
-      For commercial non-mass-produced installations (e.g. industrial plant integration, single-site
-      commercial facilities, municipal/estate utility automation), licensing is structured as a
-      flat site license fee negotiated in writing prior to deployment.
-   d. UNLIMITED COMMERCIAL BUYOUT OPTION:
-      Enterprises wishing to exempt specific production models from quarterly per-unit reporting
-      may request a one-time written Enterprise Commercial Buyout License directly from the Author.
+3. ENTERPRISE & COMMERCIAL REVENUE ROYALTY TIERS:
+   Any commercial business, enterprise, manufacturer, contractor, or high-revenue entity
+   utilizing this software (or any fork/derivative thereof) is required to license under
+   one of the following transparent tiers:
+
+   a. HARDWARE MASS-PRODUCTION (FLAT PER-UNIT):
+      - Rate: IDR 5,000 (approx. USD $0.35) per physical unit produced, flashed, or sold.
+      - Settlement: Reported and settled quarterly (every 3 months, ending March, June,
+        September, and December), payable within 30 days of quarter close.
+      - Best for: Manufacturers producing smart controllers, relay modules, and mass consumer devices.
+
+   b. INDUSTRIAL / SINGLE-SITE PROJECT LICENSE:
+      - Rate: IDR 2,000,000 per facility, building, industrial plant, or site installation.
+      - Best for: Contractors and system integrators executing specific client installations (1-3 projects/year).
+
+   c. ANNUAL UNLIMITED PROJECT PASS (ANNUAL LICENSE):
+      - Rate: IDR 12,000,000 per calendar year (equivalent to IDR 1,000,000/month).
+      - Scope: Unlimited client projects and installations during the active 12-month period.
+      - Best for: Active contractors and system integrators with frequent ongoing installations.
+
+   d. PERPETUAL ENTERPRISE BUYOUT (LIFETIME BUYOUT):
+      - Rate: IDR 65,000,000 (one-time payment).
+      - Scope: Permanent, lifetime commercial license for designated product line or enterprise
+        operations without recurring per-unit reporting or ongoing royalties forever.
+      - Best for: Large enterprises, national manufacturers, and corporate conglomerates.
 
 4. DISCLAIMER OF WARRANTY & LIMITATION OF LIABILITY:
    This software is provided "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
@@ -88,27 +95,31 @@ KETENTUAN PENGGUNAAN, MODIFIKASI, DAN LISENSI:
    d. Pembuatan cabang (fork) atau pengubahan nama proyek TIDAK MENGHAPUS atau MENGURANGI
       kewajiban royalti komersial yang diatur pada Pasal 3 di bawah ini.
 
-3. KEWAJIBAN ROYALTI UNTUK PERUSAHAAN/INSTANSI KOMERSIAL BESAR (ENTERPRISE ROYALTY):
-   a. SKEMA ROYALTI FLAT NOMINAL PER UNIT PERANGKAT:
-      Bagi setiap entitas bisnis komersial, pabrik, manufaktur, korporasi, atau badan usaha komersial
-      berskala besar yang memproduksi, merakit, menanamkan (flashing), memperjualbelikan, atau
-      mendistribusikan perangkat keras (hardware) yang memanfaatkan perangkat lunak ini (maupun
-      cabang/fork modifikasinya):
-      DIWAJIBKAN membayar royalti kekayaan intelektual dengan tarif flat nominal sebesar
-      Rp 5.000,- (lima ribu Rupiah) per unit perangkat yang diproduksi/didistribusikan (atau nilai
-      nominal yang disepakati secara tertulis bersama Pengembang).
-   b. JADWAL PELAPORAN & PEMBAYARAN KUARTALAN (TIAP 3 BULAN):
-      Laporan rekapitulasi unit dan pembayaran royalti wajib disetorkan secara kuartalan
-      (setiap 3 bulan: penutupan Maret, Juni, September, dan Desember), selambat-lambatnya 30
-      (tiga puluh) hari kalender setelah berakhirnya kuartal bersangkutan.
-   c. PENGGUNAAN PROYEK KONTRAKTOR / FASILITAS INDUSTRI NON-MASSAL:
-      Bagi pemanfaatan dalam skala proyek instalasi tunggal (misal otomasi gedung komersial,
-      fasilitas pabrik, pengolahan air komersial), skema lisensi menggunakan tarif flat per-lokasi
-      (site license) yang disepakati tertulis sebelum implementasi operasional.
-   d. OPSI LISENSI BELI PUTUS (UNLIMITED ENTERPRISE BUYOUT):
-      Korporasi yang berkehendak dibebaskan dari kewajiban pelaporan berkala per unit dapat
-      mengajukan permohonan Perjanjian Lisensi Komersial Beli Putus (One-Time Buyout) secara tertulis
-      langsung kepada Pengembang.
+3. SKEMA DAN TARIF ROYALTI KOMERSIAL / PERUSAHAAN BESAR (ENTERPRISE ROYALTY TIERS):
+   Setiap entitas bisnis komersial, pabrik, manufaktur, kontraktor proyek, atau korporasi
+   berskala besar yang memanfaatkan perangkat lunak ini (maupun cabang/fork modifikasinya)
+   diwajibkan memilih salah satu skema lisensi resmi berikut:
+
+   a. PRODUKSI MASSAL PERANGKAT KERAS (FLAT NOMINAL PER UNIT):
+      - Tarif: Rp 5.000,- (lima ribu Rupiah) per unit perangkat fisik yang diproduksi/didistribusikan.
+      - Penyetoran: Dilaporkan dan disetorkan secara kuartalan (tiap 3 bulan: penutupan Maret,
+        Juni, September, dan Desember), selambat-lambatnya 30 hari kalender setelah kuartal berakhir.
+      - Cocok untuk: Pabrik atau produsen modul/panel yang menjual produk ke pasar secara massal.
+
+   b. LISENSI PROYEK TUNGGAL / INSTALASI INDUSTRI (SINGLE-SITE PROJECT):
+      - Tarif: Rp 2.000.000,- per lokasi fasilitas, gedung, pabrik, atau instalasi proyek.
+      - Cocok untuk: Kontraktor atau integrator sistem yang sesekali mengerjakan proyek klien (1–3 proyek/tahun).
+
+   c. PAKET BEBAS PROYEK TAHUNAN (ANNUAL UNLIMITED PROJECT PASS):
+      - Tarif: Rp 12.000.000,- per tahun kalender (setara Rp 1.000.000/bulan).
+      - Cakupan: Bebas memasang sistem di berapa pun proyek/lokasi fasilitas selama masa aktif 1 tahun.
+      - Cocok untuk: Kontraktor dan integrator sistem aktif dengan jadwal instalasi proyek berkelanjutan.
+
+   d. LISENSI BELI PUTUS SEUMUR HIDUP (PERPETUAL ENTERPRISE BUYOUT):
+      - Tarif: Rp 65.000.000,- (satu kali bayar di muka).
+      - Cakupan: Hak lisensi komersial permanen seumur hidup untuk lini produk atau operasional perusahaan
+        tanpa kewajiban pelaporan berkala per unit atau royalti tahunan selamanya.
+      - Cocok untuk: Korporasi besar, produsen nasional/internasional, dan konglomerasi bisnis.
 
 4. PEMBATASAN DAN PENAFIAN TANGGUNG JAWAB (DISCLAIMER):
    Perangkat lunak ini disediakan "SEBAGAIMANA ADANYA" (AS IS), tanpa jaminan apa pun, baik tersurat
