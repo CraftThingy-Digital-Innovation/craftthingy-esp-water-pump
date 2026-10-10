@@ -12,6 +12,14 @@ public:
           _lastRawState(HIGH), _debouncedState(HIGH), _lastStateChangeMs(0), _debounceDelayMs(2000) {} // 2s debounce for water ripples
 
     void setup() override {
+        DeviceConfig& cfg = ConfigStore::get();
+        if (cfg.gpioRelay >= 0) {
+            _relayPin = (uint8_t)cfg.gpioRelay;
+        }
+        if (cfg.gpioSensor >= 0) {
+            _levelSensorPin = (uint8_t)cfg.gpioSensor;
+        }
+
         pinMode(_relayPin, OUTPUT);
         setRelay(false);
 
@@ -86,6 +94,28 @@ public:
             _dryRunTripped = false;
             response = "Safety dry-run alarm reset";
             return true;
+        } else if (cmd == "set_pins") {
+            int rPin = -1, sPin = -1;
+            int space = payload.indexOf(' ');
+            if (payload.indexOf("\"relay\"") >= 0) {
+                int rIdx = payload.indexOf("\"relay\":");
+                if (rIdx >= 0) rPin = payload.substring(rIdx + 8).toInt();
+                int sIdx = payload.indexOf("\"sensor\":");
+                if (sIdx >= 0) sPin = payload.substring(sIdx + 9).toInt();
+            } else if (space > 0) {
+                rPin = payload.substring(0, space).toInt();
+                sPin = payload.substring(space + 1).toInt();
+            }
+            if (rPin >= 0 && sPin >= 0) {
+                ConfigStore::setPinConfig((int8_t)rPin, (int8_t)sPin);
+                _relayPin = (uint8_t)rPin;
+                _levelSensorPin = (uint8_t)sPin;
+                setup();
+                response = "Hardware pins updated & saved to EEPROM: Relay=" + String(_relayPin) + ", Sensor=" + String(_levelSensorPin);
+                return true;
+            }
+            response = "Invalid pin configuration format. Use: 0 2 (relay sensor)";
+            return false;
         }
         return false;
     }
@@ -93,6 +123,8 @@ public:
     String getStatusJson() override {
         String json = "{";
         json += "\"role\":\"water_pump\",";
+        json += "\"relayPin\":" + String(_relayPin) + ",";
+        json += "\"sensorPin\":" + String(_levelSensorPin) + ",";
         json += "\"pumpRunning\":" + String(_pumpRunning ? "true" : "false") + ",";
         json += "\"interrupted\":" + String(_interrupted ? "true" : "false") + ",";
         json += "\"autoMode\":" + String(_autoMode ? "true" : "false") + ",";
