@@ -5,7 +5,7 @@
 
 class WaterPumpController : public IDeviceController {
 public:
-    WaterPumpController(uint8_t relayPin = 0, uint8_t levelSensorPin = 2, bool activeLowRelay = true, bool switchClosedWhenEmpty = true)
+    WaterPumpController(uint8_t relayPin = 0, uint8_t levelSensorPin = 3, bool activeLowRelay = true, bool switchClosedWhenEmpty = true)
         : _relayPin(relayPin), _levelSensorPin(levelSensorPin), _activeLow(activeLowRelay),
           _switchClosedWhenEmpty(switchClosedWhenEmpty), _pumpRunning(false), _autoMode(true),
           _interrupted(false), _dryRunTripped(false), _pumpStartMs(0), _maxRunTimeMs(900000), // 15 min max run safety
