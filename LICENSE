@@ -36,15 +36,24 @@ TERMS OF USE, MODIFICATION, AND LICENSING:
    d. Forking or rebranding the codebase DOES NOT exempt, waive, or diminish any commercial royalty
       obligations specified in Section 3 below.
 
-3. ENTERPRISE & COMMERCIAL HIGH-REVENUE ROYALTY OBLIGATION:
-   a. Any commercial business entity, corporation, industrial plant, utility company,
-      manufacturing enterprise, or commercial institution generating significant revenue that
-      deploys, integrates, operates, distributes, or derives financial benefit from this
-      software (or any fork/derivative thereof) IS REQUIRED to pay a fair and customary
-      intellectual property royalty to the Author (Alif Nurhidayat).
-   b. The commercial royalty percentage, terms, and formal cooperation agreement must be agreed
-      upon in writing with the Author via the contact details above prior to, or at the latest
-      within 30 (thirty) calendar days following, commercial deployment.
+3. ENTERPRISE & COMMERCIAL REVENUE ROYALTY OBLIGATION:
+   a. FLAT PER-UNIT HARDWARE ROYALTY:
+      Any commercial enterprise, manufacturer, corporation, or high-revenue business that
+      produces, manufactures, flashes, bundles, or sells physical hardware devices utilizing
+      this software (or any fork/derivative thereof) IS REQUIRED to pay a flat intellectual
+      property royalty fee of IDR 5,000 (approx. USD $0.35) per hardware unit produced or
+      distributed (or as mutually negotiated in a written agreement).
+   b. PAYMENT & REPORTING SCHEDULE (QUARTERLY):
+      Royalty statements and payments must be settled quarterly (every 3 months, covering
+      calendar quarters ending March, June, September, and December), paid within thirty (30)
+      calendar days following the close of each quarter.
+   c. PROJECT / SINGLE-SITE INDUSTRIAL INSTALLATIONS:
+      For commercial non-mass-produced installations (e.g. industrial plant integration, single-site
+      commercial facilities, municipal/estate utility automation), licensing is structured as a
+      flat site license fee negotiated in writing prior to deployment.
+   d. UNLIMITED COMMERCIAL BUYOUT OPTION:
+      Enterprises wishing to exempt specific production models from quarterly per-unit reporting
+      may request a one-time written Enterprise Commercial Buyout License directly from the Author.
 
 4. DISCLAIMER OF WARRANTY & LIMITATION OF LIABILITY:
    This software is provided "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
@@ -80,16 +89,26 @@ KETENTUAN PENGGUNAAN, MODIFIKASI, DAN LISENSI:
       kewajiban royalti komersial yang diatur pada Pasal 3 di bawah ini.
 
 3. KEWAJIBAN ROYALTI UNTUK PERUSAHAAN/INSTANSI KOMERSIAL BESAR (ENTERPRISE ROYALTY):
-   a. Bagi setiap entitas bisnis komersial, korporasi, pabrik, manufaktur, perusahaan utilitas/industri,
-      atau instansi komersial dengan skala pendapatan/omzet besar yang memanfaatkan, mengoperasikan,
-      mengintegrasikan, mendistribusikan perangkat keras/lunak turunan, atau memperoleh keuntungan
-      finansial dari penggunaan perangkat lunak ini (maupun cabang/fork modifikasinya):
-      DIWAJIBKAN membayar royalti persentase secara wajar dan lazim sebagaimana mestinya hak royalti
-      kekayaan intelektual perangkat lunak kepada Pengembang Asli (Alif Nurhidayat).
-   b. Besaran persentase royalti dan skema perjanjian kerja sama komersial wajib disepakati secara
-      tertulis dengan menghubungi langsung Pengembang pada kontak resmi di atas sebelum atau
-      selambat-lambatnya 30 (tiga puluh) hari kalender setelah implementasi perangkat lunak dalam
-      operasional komersial.
+   a. SKEMA ROYALTI FLAT NOMINAL PER UNIT PERANGKAT:
+      Bagi setiap entitas bisnis komersial, pabrik, manufaktur, korporasi, atau badan usaha komersial
+      berskala besar yang memproduksi, merakit, menanamkan (flashing), memperjualbelikan, atau
+      mendistribusikan perangkat keras (hardware) yang memanfaatkan perangkat lunak ini (maupun
+      cabang/fork modifikasinya):
+      DIWAJIBKAN membayar royalti kekayaan intelektual dengan tarif flat nominal sebesar
+      Rp 5.000,- (lima ribu Rupiah) per unit perangkat yang diproduksi/didistribusikan (atau nilai
+      nominal yang disepakati secara tertulis bersama Pengembang).
+   b. JADWAL PELAPORAN & PEMBAYARAN KUARTALAN (TIAP 3 BULAN):
+      Laporan rekapitulasi unit dan pembayaran royalti wajib disetorkan secara kuartalan
+      (setiap 3 bulan: penutupan Maret, Juni, September, dan Desember), selambat-lambatnya 30
+      (tiga puluh) hari kalender setelah berakhirnya kuartal bersangkutan.
+   c. PENGGUNAAN PROYEK KONTRAKTOR / FASILITAS INDUSTRI NON-MASSAL:
+      Bagi pemanfaatan dalam skala proyek instalasi tunggal (misal otomasi gedung komersial,
+      fasilitas pabrik, pengolahan air komersial), skema lisensi menggunakan tarif flat per-lokasi
+      (site license) yang disepakati tertulis sebelum implementasi operasional.
+   d. OPSI LISENSI BELI PUTUS (UNLIMITED ENTERPRISE BUYOUT):
+      Korporasi yang berkehendak dibebaskan dari kewajiban pelaporan berkala per unit dapat
+      mengajukan permohonan Perjanjian Lisensi Komersial Beli Putus (One-Time Buyout) secara tertulis
+      langsung kepada Pengembang.
 
 4. PEMBATASAN DAN PENAFIAN TANGGUNG JAWAB (DISCLAIMER):
    Perangkat lunak ini disediakan "SEBAGAIMANA ADANYA" (AS IS), tanpa jaminan apa pun, baik tersurat
