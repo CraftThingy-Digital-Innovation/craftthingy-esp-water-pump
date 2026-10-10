@@ -5,28 +5,38 @@
 
 class WaterPumpController : public IDeviceController {
 public:
-    WaterPumpController(uint8_t relayPin = 0, uint8_t levelSensorPin = 2, bool activeLow = true)
-        : _relayPin(relayPin), _levelSensorPin(levelSensorPin), _activeLow(activeLow),
-          _pumpRunning(false), _autoMode(true), _dryRunTripped(false),
-          _pumpStartMs(0), _maxRunTimeMs(900000) {} // 15 min max run safety
+    WaterPumpController(uint8_t relayPin = 0, uint8_t levelSensorPin = 2, bool activeLowRelay = true, bool switchClosedWhenEmpty = true)
+        : _relayPin(relayPin), _levelSensorPin(levelSensorPin), _activeLow(activeLowRelay),
+          _switchClosedWhenEmpty(switchClosedWhenEmpty), _pumpRunning(false), _autoMode(true),
+          _dryRunTripped(false), _pumpStartMs(0), _maxRunTimeMs(900000), // 15 min max run safety
+          _lastRawState(HIGH), _debouncedState(HIGH), _lastStateChangeMs(0), _debounceDelayMs(2000) {} // 2s debounce for water ripples
 
     void setup() override {
         pinMode(_relayPin, OUTPUT);
         setRelay(false);
 
-#if defined(ESP8266)
-        // GPIO2 has internal pullup on ESP-01S
+        // Internal pull-up: Switch connects between this pin and GND
         pinMode(_levelSensorPin, INPUT_PULLUP);
-#elif defined(ESP32)
-        pinMode(_levelSensorPin, INPUT_PULLUP);
-#endif
+        _debouncedState = digitalRead(_levelSensorPin);
+        _lastRawState = _debouncedState;
     }
 
     void loop() override {
-        // Read water level (LOW = water full/float up, HIGH = tank empty)
-        bool tankEmpty = (digitalRead(_levelSensorPin) == HIGH);
+        // 1. Ripple debouncing filter (averages water waves / mechanical contact bounce)
+        int rawReading = digitalRead(_levelSensorPin);
+        if (rawReading != _lastRawState) {
+            _lastRawState = rawReading;
+            _lastStateChangeMs = millis();
+        }
 
-        // Dry-run safety timer protection
+        if ((millis() - _lastStateChangeMs) >= _debounceDelayMs) {
+            _debouncedState = rawReading;
+        }
+
+        // Low water triggers contact (e.g. switch closed to GND = LOW)
+        bool tankDemandsFill = _switchClosedWhenEmpty ? (_debouncedState == LOW) : (_debouncedState == HIGH);
+
+        // 2. Dry-run safety timer protection
         if (_pumpRunning) {
             if (millis() - _pumpStartMs >= _maxRunTimeMs) {
                 setRelay(false);
@@ -34,11 +44,11 @@ public:
             }
         }
 
-        // Automatic water filling logic
+        // 3. Automatic water filling logic with mechanical float hysteresis
         if (_autoMode && !_dryRunTripped) {
-            if (tankEmpty && !_pumpRunning) {
+            if (tankDemandsFill && !_pumpRunning) {
                 setRelay(true);
-            } else if (!tankEmpty && _pumpRunning) {
+            } else if (!tankDemandsFill && _pumpRunning) {
                 setRelay(false);
             }
         }
@@ -92,11 +102,16 @@ private:
     uint8_t _relayPin;
     uint8_t _levelSensorPin;
     bool _activeLow;
+    bool _switchClosedWhenEmpty;
     bool _pumpRunning;
     bool _autoMode;
     bool _dryRunTripped;
     uint32_t _pumpStartMs;
     uint32_t _maxRunTimeMs;
+    int _lastRawState;
+    int _debouncedState;
+    uint32_t _lastStateChangeMs;
+    uint32_t _debounceDelayMs;
 
     void setRelay(bool on) {
         _pumpRunning = on;
