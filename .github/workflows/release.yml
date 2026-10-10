@@ -1,0 +1,53 @@
+name: Build and Release Firmware
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PlatformIO
+        run: |
+          python -m pip install --upgrade pip
+          pip install platformio
+
+      - name: Build All Targets
+        run: |
+          pio run -e esp01_1m
+          pio run -e esp32dev
+          pio run -e esp32s3
+          pio run -e esp32c3
+
+      - name: Package Release Assets
+        run: |
+          mkdir -p release_assets
+          cp .pio/build/esp01_1m/firmware.bin release_assets/firmware-water_pump-esp01s.bin
+          cp .pio/build/esp32dev/firmware.bin release_assets/firmware-water_pump-esp32.bin
+          cp .pio/build/esp32s3/firmware.bin release_assets/firmware-water_pump-esp32s3.bin
+          cp .pio/build/esp32c3/firmware.bin release_assets/firmware-water_pump-esp32c3.bin
+          
+          cd release_assets
+          for f in *.bin; do
+            sha256sum "$f" > "${f}.sha256"
+          done
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: release_assets/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

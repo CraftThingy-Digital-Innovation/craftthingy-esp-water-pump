@@ -1,0 +1,27 @@
+{
+  "name": "CraftThingyCore",
+  "version": "1.0.0",
+  "description": "High-efficiency self-updating framework with rolling key security, dual GitHub OTA, and failover AP captive portal for ESP8266 (ESP-01/01S) and all ESP32 variants.",
+  "keywords": [
+    "ota",
+    "github",
+    "esp8266",
+    "esp32",
+    "security",
+    "hmac",
+    "rolling-key",
+    "captive-portal",
+    "wifi-provisioning"
+  ],
+  "authors": [
+    {
+      "name": "CraftThingy Digital Innovation",
+      "maintainer": true
+    }
+  ],
+  "frameworks": "arduino",
+  "platforms": [
+    "espressif8266",
+    "espressif32"
+  ]
+}
