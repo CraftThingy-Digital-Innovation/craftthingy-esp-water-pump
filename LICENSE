@@ -17,10 +17,12 @@ KETENTUAN PENGGUNAAN, MODIFIKASI, DAN LISENSI:
    b. Instansi pelayanan publik non-profit, komunitas, dan usaha skala mikro/kecil (UMKM).
 
 2. KETENTUAN CABANG / TURUNAN (FORK & DERIVATIVE WORKS CLAUSE):
-   a. Pengguna DIIZINKAN secara penuh untuk membuat cabang (fork), memodifikasi, mengadaptasi, memperluas fitur, dan mendistribusikan salinan modifikasi dari perangkat lunak ini.
-   b. KEWAJIBAN PEWARISAN LISENSI (LICENSE INHERITANCE):
-      Setiap salinan, modifikasi, cabang (fork), atau karya turunan (derivative work) WAJIB tetap menyertakan teks lisensi ini secara utuh, mencantumkan atribusi hak cipta asli kepada Alif Nurhidayat (KillerKing93 / CraftThingy Digital Innovation), dan terikat pada seluruh ketentuan lisensi ini tanpa kecuali.
-   c. Pembuatan cabang (fork) atau pengubahan nama proyek TIDAK MENGHAPUS atau MENGURANGI kewajiban royalti komersial yang diatur pada Pasal 3 di bawah ini.
+   a. Pengguna DIIZINKAN untuk membuat cabang (fork), memodifikasi, mengadaptasi, memperluas fitur, dan mendistribusikan perangkat lunak ini.
+   b. KEWAJIBAN KETERBUKAAN SUMBER / CABANG PUBLIK (MANDATORY PUBLIC FORK / OPEN SOURCE):
+      Setiap dan seluruh bentuk modifikasi, penambahan fitur, atau karya turunan (derivative works) WAJIB dipublikasikan secara terbuka kepada publik (publicly available) dalam bentuk cabang terbuka (public fork pada repositori Git publik seperti GitHub) atau repositori terbuka lainnya. Dilarang keras membuat modifikasi tertutup atau privat (closed-source / proprietary fork) tanpa izin tertulis eksplisit dari Pengembang Asli.
+   c. KEWAJIBAN PEWARISAN LISENSI (LICENSE INHERITANCE):
+      Setiap salinan, modifikasi, cabang (fork), atau karya turunan WAJIB tetap menyertakan teks lisensi ini secara utuh, mencantumkan atribusi hak cipta asli kepada Alif Nurhidayat (KillerKing93 / CraftThingy Digital Innovation), dan terikat pada seluruh ketentuan lisensi ini tanpa kecuali.
+   d. Pembuatan cabang (fork) atau pengubahan nama proyek TIDAK MENGHAPUS atau MENGURANGI kewajiban royalti komersial yang diatur pada Pasal 3 di bawah ini.
 
 3. KEWAJIBAN ROYALTI UNTUK PERUSAHAAN/INSTANSI KOMERSIAL BESAR (ENTERPRISE / HIGH-REVENUE ROYALTY):
    a. Bagi setiap entitas bisnis komersial, korporasi, pabrik, manufaktur, perusahaan utilitas/industri, atau instansi komersial dengan skala pendapatan/omzet besar yang memanfaatkan, mengoperasikan, mengintegrasikan, mendistribusikan perangkat keras/lunak turunan, atau memperoleh keuntungan finansial dari penggunaan perangkat lunak ini (maupun cabang/fork modifikasinya):
