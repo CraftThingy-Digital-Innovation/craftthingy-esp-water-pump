@@ -31,6 +31,8 @@ private:
     static void handleTriggerUpdate();
     static void handleRotateKey();
     static void handleReboot();
+    static void handleControllerStatus();
+    static void handleControllerCommand();
     static void handleNotFound();
 
     // Helper JSON response senders

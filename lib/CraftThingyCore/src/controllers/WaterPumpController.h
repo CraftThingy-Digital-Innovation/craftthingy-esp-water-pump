@@ -8,7 +8,7 @@ public:
     WaterPumpController(uint8_t relayPin = 0, uint8_t levelSensorPin = 2, bool activeLowRelay = true, bool switchClosedWhenEmpty = true)
         : _relayPin(relayPin), _levelSensorPin(levelSensorPin), _activeLow(activeLowRelay),
           _switchClosedWhenEmpty(switchClosedWhenEmpty), _pumpRunning(false), _autoMode(true),
-          _dryRunTripped(false), _pumpStartMs(0), _maxRunTimeMs(900000), // 15 min max run safety
+          _interrupted(false), _dryRunTripped(false), _pumpStartMs(0), _maxRunTimeMs(900000), // 15 min max run safety
           _lastRawState(HIGH), _debouncedState(HIGH), _lastStateChangeMs(0), _debounceDelayMs(2000) {} // 2s debounce for water ripples
 
     void setup() override {
@@ -45,7 +45,7 @@ public:
         }
 
         // 3. Automatic water filling logic with mechanical float hysteresis
-        if (_autoMode && !_dryRunTripped) {
+        if (_autoMode && !_dryRunTripped && !_interrupted) {
             if (tankDemandsFill && !_pumpRunning) {
                 setRelay(true);
             } else if (!tankDemandsFill && _pumpRunning) {
@@ -63,21 +63,24 @@ public:
     }
 
     bool handleCommand(const String& cmd, const String& payload, String& response) override {
-        if (cmd == "on") {
+        if (cmd == "stop" || cmd == "interrupt" || cmd == "off") {
+            _interrupted = true;
+            _autoMode = false;
+            setRelay(false);
+            response = "Operation INTERRUPTED: Pump immediately stopped";
+            return true;
+        } else if (cmd == "start" || cmd == "on") {
+            _interrupted = false;
             _autoMode = false;
             _dryRunTripped = false;
             setRelay(true);
             response = "Pump turned ON manually";
             return true;
-        } else if (cmd == "off") {
-            _autoMode = false;
-            setRelay(false);
-            response = "Pump turned OFF manually";
-            return true;
-        } else if (cmd == "auto") {
+        } else if (cmd == "auto" || cmd == "resume") {
+            _interrupted = false;
             _autoMode = true;
             _dryRunTripped = false;
-            response = "Pump set to AUTO mode";
+            response = "Operation RESUMED: Set to AUTO float-switch mode";
             return true;
         } else if (cmd == "reset_safety") {
             _dryRunTripped = false;
@@ -89,11 +92,14 @@ public:
 
     String getStatusJson() override {
         String json = "{";
-        json += "\"pumpState\":\"" + String(_pumpRunning ? "running" : "stopped") + "\",";
+        json += "\"role\":\"water_pump\",";
+        json += "\"pumpRunning\":" + String(_pumpRunning ? "true" : "false") + ",";
+        json += "\"interrupted\":" + String(_interrupted ? "true" : "false") + ",";
         json += "\"autoMode\":" + String(_autoMode ? "true" : "false") + ",";
+        json += "\"tankDemandsFill\":" + String((_switchClosedWhenEmpty ? (_debouncedState == LOW) : (_debouncedState == HIGH)) ? "true" : "false") + ",";
         json += "\"dryRunAlarm\":" + String(_dryRunTripped ? "true" : "false") + ",";
-        json += "\"tankEmpty\":" + String(digitalRead(_levelSensorPin) == HIGH ? "true" : "false") + ",";
-        json += "\"runDurationSec\":" + String(_pumpRunning ? (millis() - _pumpStartMs) / 1000 : 0);
+        json += "\"runDurationSec\":" + String(_pumpRunning ? (millis() - _pumpStartMs) / 1000 : 0) + ",";
+        json += "\"maxRunTimeSec\":" + String(_maxRunTimeMs / 1000);
         json += "}";
         return json;
     }
@@ -105,6 +111,7 @@ private:
     bool _switchClosedWhenEmpty;
     bool _pumpRunning;
     bool _autoMode;
+    bool _interrupted;
     bool _dryRunTripped;
     uint32_t _pumpStartMs;
     uint32_t _maxRunTimeMs;

@@ -4,6 +4,7 @@
 #include "GitHubUpdater.h"
 #include "ModuleDetector.h"
 #include "CraftThingyCrypto.h"
+#include "CraftThingyCore.h"
 
 ApiServerType RestApi::_server(CRAFT_WEB_PORT);
 
@@ -104,6 +105,8 @@ void RestApi::setupRoutes() {
     _server.on("/api/update", HTTP_POST, handleTriggerUpdate);
     _server.on("/api/key/rotate", HTTP_POST, handleRotateKey);
     _server.on("/api/reboot", HTTP_POST, handleReboot);
+    _server.on("/api/controller/status", HTTP_GET, handleControllerStatus);
+    _server.on("/api/controller/command", HTTP_POST, handleControllerCommand);
 
     // OPTIONS pre-flight for cross-origin tools
     _server.onNotFound(handleNotFound);
@@ -130,6 +133,12 @@ void RestApi::handleStatus() {
     json += "\"rollingSequence\":" + String(cfg.rollingSequence) + ",";
     json += "\"currentRollingKeyPrefix\":\"" + String(cfg.currentRollingKey).substring(0, 8) + "...\",";
     json += "\"otaStatus\":\"" + GitHubUpdater::getStatusString() + "\"";
+
+    IDeviceController* ctrl = CraftThingyCore.getController();
+    if (ctrl != nullptr) {
+        json += ",\"controller\":" + ctrl->getStatusJson();
+    }
+
     json += "}";
 
     sendJson(200, json);
@@ -271,6 +280,58 @@ void RestApi::handleReboot() {
     sendSuccess("Device restarting...");
     delay(500);
     ESP.restart();
+}
+
+void RestApi::handleControllerStatus() {
+    IDeviceController* ctrl = CraftThingyCore.getController();
+    if (ctrl != nullptr) {
+        sendJson(200, ctrl->getStatusJson());
+    } else {
+        sendError(404, "No active hardware controller attached");
+    }
+}
+
+void RestApi::handleControllerCommand() {
+    String authMethod;
+    if (!isRequestAuthorized(_server, authMethod)) {
+        sendError(401, "Unauthorized: Valid HMAC rolling key signature or token required");
+        return;
+    }
+
+    IDeviceController* ctrl = CraftThingyCore.getController();
+    if (ctrl == nullptr) {
+        sendError(404, "No active hardware controller attached");
+        return;
+    }
+
+    String cmd = _server.hasArg("cmd") ? _server.arg("cmd") : "";
+    String payload = _server.hasArg("payload") ? _server.arg("payload") : "";
+
+    if (cmd.length() == 0 && _server.hasArg("plain")) {
+        String body = _server.arg("plain");
+        int idx = body.indexOf("\"cmd\"");
+        if (idx >= 0) {
+            int start = body.indexOf(':', idx) + 1;
+            int q1 = body.indexOf('"', start);
+            int q2 = body.indexOf('"', q1 + 1);
+            if (q1 >= 0 && q2 > q1) cmd = body.substring(q1 + 1, q2);
+        }
+        int payloadIdx = body.indexOf("\"payload\"");
+        if (payloadIdx >= 0) {
+            int start = body.indexOf(':', payloadIdx) + 1;
+            int q1 = body.indexOf('"', start);
+            int q2 = body.indexOf('"', q1 + 1);
+            if (q1 >= 0 && q2 > q1) payload = body.substring(q1 + 1, q2);
+        }
+    }
+
+    cmd.toLowerCase();
+    String response;
+    if (ctrl->handleCommand(cmd, payload, response)) {
+        sendSuccess(response);
+    } else {
+        sendError(400, "Unknown command or failed to execute: " + cmd);
+    }
 }
 
 void RestApi::handleNotFound() {
