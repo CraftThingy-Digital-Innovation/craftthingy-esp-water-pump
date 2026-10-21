@@ -204,7 +204,7 @@ python tools/pump_ctl.py --host 192.168.1.150 reprobe
 
 Pushing a Git tag triggers [`.github/workflows/release.yml`](.github/workflows/release.yml):
 ```bash
-git tag v1.1.2
-git push origin v1.1.2
+git tag v1.1.3
+git push origin v1.1.3
 ```
 GitHub Actions automatically compiles `firmware-water_pump-esp01s.bin`, `firmware-water_pump-esp32.bin`, `firmware-water_pump-esp32s3.bin`, and `firmware-water_pump-esp32c3.bin`, calculates SHA-256 checksums, and attaches them to the GitHub Release.
