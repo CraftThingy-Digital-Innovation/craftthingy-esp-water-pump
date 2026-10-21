@@ -593,6 +593,13 @@ function pollTelemetry(){
     pill.className='live-pill';
     liveText.textContent='CONNECTED';
 
+    if(d.status==='error'||(!d.hardwareSchema&&!(d.data&&d.data.hardwareSchema))){
+      var sBadge=document.getElementById('schemaBadge');
+      sBadge.textContent='BASE CORE MODE (No Pump App)';
+      sBadge.className='badge badge-legacy';
+      return;
+    }
+
     if(dev.hardwareSchema){
       var sBadge=document.getElementById('schemaBadge');
       var sName=dev.hardwareSchema.toUpperCase();
@@ -671,6 +678,11 @@ function pollTelemetry(){
     var pill=document.getElementById('livePill');
     pill.className='live-pill disconnected';
     document.getElementById('liveText').textContent='OFFLINE';
+    var sBadge=document.getElementById('schemaBadge');
+    if(sBadge){
+      sBadge.textContent='UNREACHABLE';
+      sBadge.className='badge badge-legacy';
+    }
   });
 }
 
