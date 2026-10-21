@@ -525,6 +525,7 @@
     const url = `http://${host}${path}`;
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const nonce = randomHex(8);
+    const bodyStr = bodyObj ? JSON.stringify(bodyObj) : "";
     const cleanPath = path.split('?')[0];
     const payloadToSign = `${method}\n${cleanPath}\n${timestamp}\n${nonce}\n${bodyStr}`;
     const signature = await computeHmacSha256(key, payloadToSign);
