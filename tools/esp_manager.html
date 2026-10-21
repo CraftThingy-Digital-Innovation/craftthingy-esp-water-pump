@@ -243,6 +243,7 @@
       <div class="status-item"><div class="label">Device Name</div><div class="val" id="valName" style="color:var(--accent);">--</div></div>
       <div class="status-item"><div class="label">Chip Target</div><div class="val" id="valChip">--</div></div>
       <div class="status-item"><div class="label">Flash Size</div><div class="val" id="valFlash">--</div></div>
+      <div class="status-item"><div class="label">App Version</div><div class="val" id="valAppVer" style="color:#10b981; font-weight:700;">--</div></div>
       <div class="status-item"><div class="label">Core Version</div><div class="val" id="valCoreVer">--</div></div>
       <div class="status-item"><div class="label">Active Role</div><div class="val" id="valRole">--</div></div>
       <div class="status-item"><div class="label">WiFi Status</div><div class="val" id="valWifi">--</div></div>
@@ -580,8 +581,8 @@
       }
       document.getElementById('valChip').textContent = sys.chip ? `${sys.chip} (${sys.boardTarget || ''})` : (data.chip || "Unknown");
       document.getElementById('valFlash').textContent = sys.flashBytes ? `${(sys.flashBytes / 1024 / 1024).toFixed(1)} MB` : (data.flashBytes ? `${(data.flashBytes / 1024 / 1024).toFixed(1)} MB` : "1.0 MB");
-      const verText = sys.appVersion ? `${sys.appVersion} (Core ${sys.coreVersion || '1.1.5'})` : (sys.coreVersion || data.coreVersion || "1.1.5");
-      document.getElementById('valCoreVer').textContent = verText;
+      document.getElementById('valAppVer').textContent = sys.appVersion || data.appVersion || (ota.activeRole === 'water_pump' ? '1.1.5' : '--');
+      document.getElementById('valCoreVer').textContent = sys.coreVersion || data.coreVersion || "1.1.0";
       document.getElementById('valRole').textContent = ota.activeRole || data.activeRole || "water_pump";
       document.getElementById('valWifi').textContent = net.state || data.wifiState || "ap_mode";
       document.getElementById('valApSsid').textContent = net.apSsid ? `${net.apSsid} ${net.apSecured ? '[🔒 WPA2]' : '[Open]'}` : (net.state === 'ap_mode' ? 'Broadcasting' : '--');
