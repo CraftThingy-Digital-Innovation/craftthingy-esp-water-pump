@@ -347,12 +347,12 @@ def https_server_thread(bin_path: str, local_ip: str, stop_event: threading.Even
                         {
                             "name": "firmware-water_pump-esp01s.bin",
                             "size": bin_size,
-                            "browser_download_url": f"https://release-assets.githubusercontent.com/firmware-water_pump-esp01s.bin"
+                            "browser_download_url": "https://api.github.com/download/firmware-water_pump-esp01s.bin"
                         },
                         {
                             "name": "firmware-esp01s.bin",
                             "size": bin_size,
-                            "browser_download_url": f"https://release-assets.githubusercontent.com/firmware-esp01s.bin"
+                            "browser_download_url": "https://api.github.com/download/firmware-esp01s.bin"
                         }
                     ]
                 }).encode("utf-8")
