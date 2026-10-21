@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>CraftThingy Water Pump & PZEM Power Dashboard</title>
+<style>
+:root{
+  --bg:#070b14;
+  --surface:#0f172a;
+  --surface-glass:rgba(15,23,42,0.82);
+  --card-border:rgba(255,255,255,0.08);
+  --cyan:#38bdf8;
+  --cyan-dark:#0284c7;
+  --emerald:#10b981;
+  --amber:#f59e0b;
+  --rose:#f43f5e;
+  --purple:#a855f7;
+  --text-main:#f8fafc;
+  --text-muted:#94a3b8;
+  --text-dim:#64748b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:radial-gradient(ellipse at top,#0f1d36 0%,#070b14 70%);
+  color:var(--text-main);
+  padding:20px 14px 40px 14px;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+.app-container{
+  width:100%;
+  max-width:540px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+.card{
+  background:var(--surface-glass);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  border:1px solid var(--card-border);
+  border-radius:18px;
+  padding:20px;
+  box-shadow:0 12px 32px rgba(0,0,0,0.5);
+  position:relative;
+  overflow:hidden;
+}
+.card::before{
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent);
+}
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:6px 4px;
+}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-icon{
+  width:42px;height:42px;
+  border-radius:12px;
+  background:linear-gradient(135deg,#0284c7,#38bdf8);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 20px rgba(56,189,248,0.4);
+}
+.brand-icon svg{width:24px;height:24px;fill:#fff}
+.brand-text h1{font-size:1.25rem;font-weight:800;color:#fff;letter-spacing:-0.3px}
+.brand-text p{font-size:0.75rem;color:var(--text-muted)}
+.live-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 12px;
+  border-radius:99px;
+  font-size:0.75rem;
+  font-weight:700;
+  background:rgba(16,185,129,0.15);
+  border:1px solid rgba(16,185,129,0.3);
+  color:#34d399;
+}
+.live-pill.disconnected{
+  background:rgba(244,63,94,0.15);
+  border-color:rgba(244,63,94,0.3);
+  color:#fda4af;
+}
+.pulse-dot{
+  width:7px;height:7px;
+  border-radius:50%;
+  background:#10b981;
+  box-shadow:0 0 10px #10b981;
+  animation:pulse 1.8s infinite;
+}
+.live-pill.disconnected .pulse-dot{background:#f43f5e;box-shadow:0 0 10px #f43f5e}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* Target Connection Bar */
+.target-bar{
+  background:rgba(11,17,32,0.7);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:12px;
+  padding:10px 14px;
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.target-bar input{
+  flex:1;
+  background:transparent;
+  border:none;
+  outline:none;
+  color:#fff;
+  font-family:ui-monospace,SFMono-Regular,monospace;
+  font-size:0.85rem;
+}
+.btn-connect{
+  background:#0284c7;
+  color:#fff;
+  border:none;
+  border-radius:8px;
+  padding:6px 12px;
+  font-size:0.8rem;
+  font-weight:700;
+  cursor:pointer;
+}
+
+/* Schema Sub-bar */
+.schema-bar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:rgba(11,17,32,0.6);
+  border:1px solid rgba(255,255,255,0.05);
+  border-radius:12px;
+  padding:8px 14px;
+  font-size:0.78rem;
+}
+.badge{
+  display:inline-block;
+  padding:3px 8px;
+  border-radius:6px;
+  font-size:0.7rem;
+  font-weight:700;
+  text-transform:uppercase;
+}
+.badge-pzem{background:rgba(168,85,247,0.18);border:1px solid rgba(168,85,247,0.4);color:#c084fc}
+.badge-legacy{background:rgba(148,163,184,0.15);border:1px solid rgba(148,163,184,0.3);color:#cbd5e1}
+
+/* Hero Water Tank Visualizer & State */
+.hero-tank{
+  display:grid;
+  grid-template-columns:130px 1fr;
+  gap:20px;
+  align-items:center;
+}
+.tank-visual-wrap{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+}
+.tank-visual{
+  width:110px;
+  height:150px;
+  border:3px solid rgba(56,189,248,0.35);
+  border-radius:16px;
+  position:relative;
+  background:rgba(11,17,32,0.8);
+  overflow:hidden;
+  box-shadow:inset 0 0 20px rgba(0,0,0,0.6);
+}
+.tank-water{
+  position:absolute;
+  bottom:0;left:0;right:0;
+  height:40%;
+  background:linear-gradient(180deg,#38bdf8 0%,#0369a1 100%);
+  transition:height 0.8s cubic-bezier(0.4,0,0.2,1);
+}
+.tank-water.filling{background:linear-gradient(180deg,#34d399 0%,#047857 100%)}
+.tank-water::before{
+  content:'';
+  position:absolute;
+  top:-8px;left:-50%;right:-50%;height:16px;
+  background:radial-gradient(circle,rgba(255,255,255,0.4) 20%,transparent 60%);
+  animation:wave 2.5s infinite linear;
+}
+@keyframes wave{0%{transform:translateX(0)}100%{transform:translateX(50%)}}
+.tank-mark{position:absolute;right:6px;font-size:0.62rem;color:var(--text-dim);font-family:monospace}
+.tank-mark.top{top:8px}
+.tank-mark.mid{top:70px}
+.tank-mark.bot{bottom:8px}
+.tank-label{font-size:0.78rem;font-weight:700;text-align:center;color:var(--text-muted)}
+
+.pump-info{display:flex;flex-direction:column;gap:10px}
+.pump-status-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 14px;
+  border-radius:10px;
+  font-size:0.85rem;
+  font-weight:700;
+  background:rgba(148,163,184,0.12);
+  color:var(--text-muted);
+  border:1px solid rgba(148,163,184,0.2);
+  width:fit-content;
+}
+.pump-status-badge.active{
+  background:rgba(16,185,129,0.18);
+  border-color:rgba(16,185,129,0.5);
+  color:#34d399;
+  box-shadow:0 0 16px rgba(16,185,129,0.3);
+}
+.pump-status-badge.interrupted{
+  background:rgba(244,63,94,0.18);
+  border-color:rgba(244,63,94,0.5);
+  color:#f43f5e;
+}
+.impeller{width:16px;height:16px;fill:currentColor}
+.pump-status-badge.active .impeller{animation:spin 1.2s infinite linear}
+@keyframes spin{100%{transform:rotate(360deg)}}
+.timer-text{
+  font-size:1.45rem;
+  font-weight:800;
+  font-family:ui-monospace,SFMono-Regular,monospace;
+  color:#fff;
+  letter-spacing:-0.5px;
+}
+.float-status{font-size:0.82rem;display:flex;align-items:center;gap:6px;color:var(--text-muted)}
+.float-status span{font-weight:700;color:var(--text-main)}
+
+.alarm-banner{
+  background:rgba(244,63,94,0.15);
+  border:1px solid rgba(244,63,94,0.4);
+  color:#fda4af;
+  border-radius:10px;
+  padding:10px 14px;
+  font-size:0.8rem;
+  font-weight:600;
+  margin-top:10px;
+  display:none;
+}
+.alarm-banner.visible{display:block}
+
+/* Control Actions */
+.control-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:10px;
+  margin-top:16px;
+}
+.btn-cmd{
+  padding:13px 8px;
+  border:none;
+  border-radius:10px;
+  font-size:0.85rem;
+  font-weight:700;
+  cursor:pointer;
+  transition:all 0.2s cubic-bezier(0.4,0,0.2,1);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+}
+.btn-cmd:active{transform:scale(0.96)}
+.btn-auto{
+  background:linear-gradient(135deg,rgba(16,185,129,0.25),rgba(5,150,105,0.35));
+  border:1px solid rgba(16,185,129,0.4);
+  color:#6ee7b7;
+}
+.btn-auto:hover{background:rgba(16,185,129,0.4);color:#fff}
+.btn-start{
+  background:linear-gradient(135deg,rgba(56,189,248,0.25),rgba(2,132,199,0.35));
+  border:1px solid rgba(56,189,248,0.4);
+  color:#7dd3fc;
+}
+.btn-start:hover{background:rgba(56,189,248,0.4);color:#fff}
+.btn-stop{
+  background:linear-gradient(135deg,rgba(244,63,94,0.25),rgba(225,29,72,0.35));
+  border:1px solid rgba(244,63,94,0.4);
+  color:#fda4af;
+}
+.btn-stop:hover{background:rgba(244,63,94,0.4);color:#fff}
+
+/* PZEM Grid */
+.telemetry-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.telemetry-hd h2{font-size:1.05rem;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px}
+.telemetry-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.gauge-card{
+  background:rgba(11,17,32,0.7);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:14px;
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.gauge-label{font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim)}
+.gauge-val{font-size:1.45rem;font-weight:800;font-family:ui-monospace,SFMono-Regular,monospace;color:#fff}
+.gauge-val span{font-size:0.8rem;color:var(--text-muted);font-weight:500;margin-left:2px}
+.gauge-sub{font-size:0.7rem;color:var(--text-muted)}
+.watt-bar-wrap{
+  grid-column:1 / -1;
+  background:rgba(11,17,32,0.7);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:14px;
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.watt-bar-bg{width:100%;height:8px;background:#1e293b;border-radius:99px;overflow:hidden}
+.watt-bar-fill{height:100%;width:0%;background:linear-gradient(90deg,#38bdf8,#10b981,#f59e0b);border-radius:99px;transition:width 0.6s ease}
+
+/* Drawers & Modals */
+.drawer{border:1px solid var(--card-border);background:rgba(15,23,42,0.5);border-radius:14px;overflow:hidden}
+.drawer-hd{
+  padding:14px 16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  cursor:pointer;
+  user-select:none;
+  background:rgba(15,23,42,0.6);
+  font-size:0.9rem;
+  font-weight:600;
+}
+.drawer-hd:hover{background:rgba(30,41,59,0.5)}
+.drawer-arrow{width:16px;height:16px;fill:var(--text-muted);transition:transform 0.3s}
+.drawer.open .drawer-arrow{transform:rotate(180deg)}
+.drawer-bd{display:none;padding:16px;border-top:1px solid rgba(255,255,255,0.05)}
+.drawer.open .drawer-bd{display:block}
+
+.fg{margin-bottom:12px}
+label{display:block;font-size:0.75rem;color:var(--text-muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+input{
+  width:100%;
+  background:#090d16;
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:8px;
+  padding:11px 12px;
+  color:#fff;
+  font-size:0.9rem;
+  outline:none;
+}
+input:focus{border-color:var(--cyan)}
+.btn-secondary{
+  background:#1e293b;
+  color:var(--text-main);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:8px;
+  padding:10px 14px;
+  font-size:0.85rem;
+  font-weight:600;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.btn-secondary:hover{background:#334155}
+
+.msg{padding:12px;border-radius:8px;font-size:0.85rem;margin-top:12px;display:none;text-align:center}
+.msg-success{background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#6ee7b7}
+.msg-error{background:rgba(244,63,94,0.15);border:1px solid #f43f5e;color:#fda4af}
+.footer{text-align:center;color:var(--text-dim);font-size:0.74rem;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="app-container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+      </div>
+      <div class="brand-text">
+        <h1 id="deviceTitle">Water Pump Controller</h1>
+        <p id="ipSubtext">Target: 192.168.4.1</p>
+      </div>
+    </div>
+    <div id="livePill" class="live-pill">
+      <span class="pulse-dot"></span>
+      <span id="liveText">CONNECTED</span>
+    </div>
+  </div>
+
+  <!-- Target Connection IP Bar -->
+  <div class="target-bar">
+    <span style="font-size:0.8rem;color:var(--text-dim)">Device Host/IP:</span>
+    <input type="text" id="targetHostInput" value="192.168.4.1">
+    <button class="btn-connect" onclick="reconnectTarget()">Sync</button>
+  </div>
+
+  <!-- Schema & Live Info Bar -->
+  <div class="schema-bar">
+    <div style="display:flex;align-items:center;gap:6px">
+      <span style="color:var(--text-dim)">Schema:</span>
+      <span id="schemaBadge" class="badge badge-pzem">PROBING...</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <span style="color:var(--text-dim)">Rise Time:</span>
+      <span id="riseTimeVal" style="font-family:monospace;color:#fff">-- us</span>
+    </div>
+  </div>
+
+  <!-- Hero Water Tank + Pump State -->
+  <div class="card">
+    <div class="hero-tank">
+      <div class="tank-visual-wrap">
+        <div class="tank-visual">
+          <div class="tank-mark top">FULL</div>
+          <div class="tank-mark mid">50%</div>
+          <div class="tank-mark bot">LOW</div>
+          <div id="tankWater" class="tank-water"></div>
+        </div>
+        <div id="tankLabel" class="tank-label">NORMAL</div>
+      </div>
+
+      <div class="pump-info">
+        <div id="pumpBadge" class="pump-status-badge">
+          <svg class="impeller" viewBox="0 0 24 24">
+            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 14.93V17a1 1 0 0 1-2 0v-.07a4 4 0 0 1-2.86-2.86H8a1 1 0 0 1 0-2h.14A4 4 0 0 1 11 9.21V9a1 1 0 0 1 2 0v.21a4 4 0 0 1 2.86 2.86H16a1 1 0 0 1 0 2h-.14A4 4 0 0 1 13 16.93z"/>
+          </svg>
+          <span id="pumpBadgeText">STANDBY</span>
+        </div>
+        <div>
+          <div style="font-size:0.7rem;color:var(--text-dim);font-weight:600;text-transform:uppercase">Active Duration</div>
+          <div id="pumpTimer" class="timer-text">00:00</div>
+        </div>
+        <div class="float-status">
+          Float Switch: <span id="floatStatusText">Satisfied</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dry-run Safety Alarm Banner -->
+    <div id="dryRunAlarm" class="alarm-banner">
+      ⚠️ <strong>DRY-RUN ALARM:</strong> Continuous run timeout reached. Pump stopped to protect hardware.
+      <button class="btn-secondary" style="margin-top:8px;width:100%;padding:6px" onclick="sendCmd('reset_safety')">Reset Alarm</button>
+    </div>
+
+    <!-- Quick Action Controls -->
+    <div class="control-actions">
+      <button class="btn-cmd btn-auto" onclick="sendCmd('auto')">
+        <span style="font-size:1.1rem">🔄</span>
+        <span>AUTO</span>
+      </button>
+      <button class="btn-cmd btn-start" onclick="sendCmd('start')">
+        <span style="font-size:1.1rem">▶️</span>
+        <span>MANUAL</span>
+      </button>
+      <button class="btn-cmd btn-stop" onclick="sendCmd('stop')">
+        <span style="font-size:1.1rem">⏹️</span>
+        <span>STOP</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- PZEM-004T AC Electrical Telemetry Card -->
+  <div id="pzemCard" class="card">
+    <div class="telemetry-hd">
+      <h2>
+        <svg style="width:18px;height:18px;fill:#a855f7" viewBox="0 0 24 24"><path d="M11 15h2v2h-2zm0-8h2v6h-2zm1-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+        PZEM-004T AC Telemetry
+      </h2>
+      <span id="acAlertBadge" class="badge" style="background:rgba(16,185,129,0.15);color:#34d399">AC 220V OK</span>
+    </div>
+
+    <div class="telemetry-grid">
+      <div class="gauge-card">
+        <div class="gauge-label">AC Voltage</div>
+        <div class="gauge-val" id="valVoltage">0.0 <span>V</span></div>
+        <div class="gauge-sub" id="valFreq">50.0 Hz</div>
+      </div>
+      <div class="gauge-card">
+        <div class="gauge-label">Current</div>
+        <div class="gauge-val" id="valCurrent">0.00 <span>A</span></div>
+        <div class="gauge-sub">RMS Load</div>
+      </div>
+      <div class="gauge-card">
+        <div class="gauge-label">Active Power</div>
+        <div class="gauge-val" id="valPower">0.0 <span>W</span></div>
+        <div class="gauge-sub" id="valPf">0.00 PF</div>
+      </div>
+      <div class="gauge-card">
+        <div class="gauge-label">Accumulated</div>
+        <div class="gauge-val" id="valEnergy">0.00 <span>kWh</span></div>
+        <div class="gauge-sub">Total Energy</div>
+      </div>
+      <div class="watt-bar-wrap">
+        <div style="display:flex;justify-content:space-between;font-size:0.72rem">
+          <span style="color:var(--text-dim)">House Power Load (1300W Budget)</span>
+          <span id="wattPctText" style="color:var(--cyan);font-weight:700">0%</span>
+        </div>
+        <div class="watt-bar-bg">
+          <div id="wattBarFill" class="watt-bar-fill"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hardware Re-probe & Diagnostics Drawer -->
+  <div class="drawer" id="hwDrawer">
+    <div class="drawer-hd" onclick="toggleDrawer('hwDrawer')">
+      <span>⚡ Hardware Auto-Probe & Diagnostics</span>
+      <svg class="drawer-arrow" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+    </div>
+    <div class="drawer-bd">
+      <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:12px">
+        Trigger a live GPIO 2 capacitive rise-time test to detect whether a 1µF or 10µF boot-delay circuit or legacy wiring is attached.
+      </p>
+      <button class="btn-secondary" style="width:100%" onclick="sendCmd('reprobe')">Re-Probe Hardware Schema</button>
+    </div>
+  </div>
+
+  <!-- Security & Master Key Drawer -->
+  <div class="drawer" id="secDrawer">
+    <div class="drawer-hd" onclick="toggleDrawer('secDrawer')">
+      <span>🔐 Master Secret Key (API Authentication)</span>
+      <svg class="drawer-arrow" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+    </div>
+    <div class="drawer-bd">
+      <div class="fg">
+        <label>Master Secret Key</label>
+        <input type="password" id="masterKeyInput" placeholder="a1b2c3d4e5f6...">
+      </div>
+      <button class="btn-secondary" style="width:100%" onclick="saveMasterKey()">Save Key Locally</button>
+    </div>
+  </div>
+
+  <div id="statusAlert" class="msg"></div>
+  <div class="footer">CraftThingy Water Pump Controller &copy; 2026 • Tools v1.1.2</div>
+</div>
+
+<script>
+var DEFAULT_KEY="a1b2c3d4e5f60718293a4b5c6d7e8f90112233445566778899aabbccddeeff00";
+var activeKey=localStorage.getItem('craft_master_key')||DEFAULT_KEY;
+var targetHost=localStorage.getItem('craft_pump_host')||'192.168.4.1';
+
+function getAuthHeaders(){
+  var h={'Content-Type':'application/json'};
+  if(activeKey) h['X-Master-Key']=activeKey;
+  return h;
+}
+function toggleDrawer(id){document.getElementById(id).classList.toggle('open');}
+function showAlert(txt,isErr){
+  var el=document.getElementById('statusAlert');
+  el.className='msg '+(isErr?'msg-error':'msg-success');
+  el.textContent=txt;
+  el.style.display='block';
+  setTimeout(function(){el.style.display='none';},4000);
+}
+function reconnectTarget(){
+  var host=document.getElementById('targetHostInput').value.trim();
+  if(host){
+    targetHost=host;
+    localStorage.setItem('craft_pump_host',host);
+    document.getElementById('ipSubtext').textContent='Target: '+host;
+    pollTelemetry();
+    showAlert('Target updated to '+host,false);
+  }
+}
+function formatSec(s){
+  var m=Math.floor(s/60);
+  var sec=s%60;
+  return (m<10?'0':'')+m+':'+(sec<10?'0':'')+sec;
+}
+
+function sendCmd(cmd){
+  fetch('http://'+targetHost+'/api/v1/device/command',{
+    method:'POST',
+    headers:getAuthHeaders(),
+    body:JSON.stringify({command:cmd})
+  }).then(function(r){return r.json();})
+  .then(function(d){
+    if(d.status==='success') showAlert(d.data.message||'Command executed',false);
+    else showAlert(d.error?d.error.message:'Command failed',true);
+    pollTelemetry();
+  }).catch(function(){showAlert('Error communicating with device',true);});
+}
+
+function pollTelemetry(){
+  fetch('http://'+targetHost+'/api/v1/device/status')
+  .then(function(r){return r.json();})
+  .then(function(d){
+    var dev=(d.data&&d.data.role)?d.data:(d.data&&d.data.device?d.data.device:d);
+    var pill=document.getElementById('livePill');
+    var liveText=document.getElementById('liveText');
+    pill.className='live-pill';
+    liveText.textContent='CONNECTED';
+
+    if(dev.hardwareSchema){
+      var sBadge=document.getElementById('schemaBadge');
+      var sName=dev.hardwareSchema.toUpperCase();
+      sBadge.textContent=sName.replace('_',' ');
+      sBadge.className=(sName.indexOf('PZEM')>=0)?'badge badge-pzem':'badge badge-legacy';
+    }
+    if(dev.riseTimeUs!==undefined){
+      document.getElementById('riseTimeVal').textContent=dev.riseTimeUs+' us';
+    }
+
+    var demandsFill=dev.tankDemandsFill;
+    var tankEl=document.getElementById('tankWater');
+    var tankLbl=document.getElementById('tankLabel');
+    if(demandsFill){
+      tankEl.style.height='20%';
+      tankEl.className='tank-water';
+      tankLbl.textContent='LOW WATER';
+      tankLbl.style.color='var(--amber)';
+      document.getElementById('floatStatusText').textContent='CALLING FOR WATER';
+      document.getElementById('floatStatusText').style.color='var(--amber)';
+    }else{
+      tankEl.style.height='85%';
+      tankEl.className='tank-water filling';
+      tankLbl.textContent='SATISFIED / FULL';
+      tankLbl.style.color='var(--emerald)';
+      document.getElementById('floatStatusText').textContent='SATISFIED (HIGH)';
+      document.getElementById('floatStatusText').style.color='var(--emerald)';
+    }
+
+    var isRunning=dev.pumpRunning;
+    var pBadge=document.getElementById('pumpBadge');
+    var pText=document.getElementById('pumpBadgeText');
+    if(isRunning){
+      pBadge.className='pump-status-badge active';
+      pText.textContent='RUNNING';
+    }else if(dev.interrupted){
+      pBadge.className='pump-status-badge interrupted';
+      pText.textContent='STOPPED';
+    }else{
+      pBadge.className='pump-status-badge';
+      pText.textContent='STANDBY';
+    }
+
+    document.getElementById('pumpTimer').textContent=formatSec(dev.runDurationSec||0);
+    var alarmEl=document.getElementById('dryRunAlarm');
+    if(dev.dryRunAlarm) alarmEl.className='alarm-banner visible';
+    else alarmEl.className='alarm-banner';
+
+    var pzemCard=document.getElementById('pzemCard');
+    if(!dev.hasPzem) pzemCard.style.opacity='0.45';
+    else pzemCard.style.opacity='1';
+
+    document.getElementById('valVoltage').innerHTML=(dev.voltage||0).toFixed(1)+' <span>V</span>';
+    document.getElementById('valFreq').textContent=(dev.frequency||50.0).toFixed(1)+' Hz';
+    document.getElementById('valCurrent').innerHTML=(dev.current||0).toFixed(3)+' <span>A</span>';
+    var pwr=dev.power||0;
+    document.getElementById('valPower').innerHTML=pwr.toFixed(1)+' <span>W</span>';
+    document.getElementById('valPf').textContent='PF: '+(dev.powerFactor||0).toFixed(2);
+    document.getElementById('valEnergy').innerHTML=(dev.energy||0).toFixed(3)+' <span>kWh</span>';
+
+    var pct=Math.min(100,Math.round((pwr/1300)*100));
+    document.getElementById('wattBarFill').style.width=pct+'%';
+    document.getElementById('wattPctText').textContent=pct+'% ('+pwr.toFixed(0)+'W / 1300W)';
+
+    var acAlert=document.getElementById('acAlertBadge');
+    if(dev.acPowerAlert){
+      acAlert.textContent='⚠️ MAINS LOST';
+      acAlert.style.background='rgba(244,63,94,0.2)';
+      acAlert.style.color='#f43f5e';
+    }else{
+      acAlert.textContent='AC 220V OK';
+      acAlert.style.background='rgba(16,185,129,0.15)';
+      acAlert.style.color='#34d399';
+    }
+  }).catch(function(){
+    var pill=document.getElementById('livePill');
+    pill.className='live-pill disconnected';
+    document.getElementById('liveText').textContent='OFFLINE';
+  });
+}
+
+function saveMasterKey(){
+  var k=document.getElementById('masterKeyInput').value.trim();
+  if(k){
+    localStorage.setItem('craft_master_key',k);
+    activeKey=k;
+    showAlert('Master Key saved to browser',false);
+  }
+}
+
+window.onload=function(){
+  document.getElementById('targetHostInput').value=targetHost;
+  document.getElementById('ipSubtext').textContent='Target: '+targetHost;
+  document.getElementById('masterKeyInput').value=activeKey;
+  pollTelemetry();
+  setInterval(pollTelemetry,2500);
+};
+</script>
+</body>
+</html>

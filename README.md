@@ -168,11 +168,43 @@ pio run -e esp01_1m -t upload
 
 ---
 
+## 🛠️ Dedicated Management Tools
+
+The repository includes dedicated tools in the [`tools/`](file:///d:/CraftThingy/esp-firmware-stuff/craftthingy-esp-water-pump/tools) folder:
+
+### 1. `tools/water_pump_manager.html` (Standalone Browser Dashboard)
+Double-click to open in any web browser on your phone, tablet, or PC:
+* **Live Animated Tank Visualizer**: Real-time water level cylinder and wave ripples (`@keyframes wave`).
+* **Pump Telemetry**: Active run duration timer, spinning impeller animation, and dry-run safety alert banner.
+* **PZEM-004T Instrumentation**: AC Voltage (V), Frequency (Hz), Current (A), Active Power (W), Power Factor, and Accumulated Energy (kWh).
+* **1300W House Budget Bar**: Dynamic load meter showing real-time pump power impact.
+* **Instant Controls**: Buttons for `AUTO`, `MANUAL START`, `EMERGENCY STOP`, `RESET ALARM`, and `RE-PROBE HW`.
+
+### 2. `tools/pump_ctl.py` (Command-Line Interface)
+```bash
+# View live telemetry and PZEM power meters
+python tools/pump_ctl.py --host 192.168.1.150 status
+
+# Manually start the pump
+python tools/pump_ctl.py --host 192.168.1.150 start
+
+# Emergency stop
+python tools/pump_ctl.py --host 192.168.1.150 stop
+
+# Resume auto float-switch mode
+python tools/pump_ctl.py --host 192.168.1.150 auto
+
+# Re-probe hardware schema (test 1uF/10uF RC boot-delay circuit)
+python tools/pump_ctl.py --host 192.168.1.150 reprobe
+```
+
+---
+
 ## 🤖 Automated CI/CD Workflow
 
-Pushing a Git tag triggers [`.github/workflows/release.yml`](file:///d:/CraftThingy/esp-stuff/craftthingy-esp-water-pump/.github/workflows/release.yml):
+Pushing a Git tag triggers [`.github/workflows/release.yml`](.github/workflows/release.yml):
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.1.2
+git push origin v1.1.2
 ```
-GitHub Actions automatically compiles `firmware-water_pump-esp01s.bin` and `firmware-water_pump-esp32.bin`, calculates SHA-256 checksums, and attaches them to the GitHub Release.
+GitHub Actions automatically compiles `firmware-water_pump-esp01s.bin`, `firmware-water_pump-esp32.bin`, `firmware-water_pump-esp32s3.bin`, and `firmware-water_pump-esp32c3.bin`, calculates SHA-256 checksums, and attaches them to the GitHub Release.
