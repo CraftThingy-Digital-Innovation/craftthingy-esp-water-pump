@@ -412,7 +412,7 @@ input:focus{border-color:var(--cyan)}
   <div style="display:flex;gap:6px;margin-top:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
     <span style="font-size:0.75rem;color:var(--text-dim)">Quick Select:</span>
     <button type="button" class="chip-btn" id="btnPumpHomeWifi" onclick="switchToPumpStaIp()">🏠 Home Wi-Fi (<span id="pumpStaIpText">Saved IP</span>)</button>
-    <button type="button" class="chip-btn" onclick="setPumpHost('craftthingy.local')">🌐 mDNS (craftthingy.local)</button>
+    <button type="button" class="chip-btn" id="btnPumpMdns" onclick="setPumpHost('craftthingy-water-pump.local')">🌐 mDNS (craftthingy-water-pump.local)</button>
     <button type="button" class="chip-btn" onclick="setPumpHost('192.168.4.1')">📶 Setup Hotspot (192.168.4.1)</button>
   </div>
 
@@ -424,7 +424,7 @@ input:focus{border-color:var(--cyan)}
     </p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button type="button" class="btn-secondary" style="font-size:0.75rem;padding:6px 12px;background:#ef4444;color:#fff;" onclick="switchToPumpStaIp()">👉 Switch to Home Wi-Fi IP</button>
-      <button type="button" class="btn-secondary" style="font-size:0.75rem;padding:6px 12px;" onclick="setPumpHost('craftthingy.local')">🌐 Try mDNS (craftthingy.local)</button>
+      <button type="button" class="btn-secondary" style="font-size:0.75rem;padding:6px 12px;" onclick="setPumpHost('craftthingy-water-pump.local')">🌐 Try mDNS (craftthingy-water-pump.local)</button>
     </div>
   </div>
 
@@ -679,6 +679,15 @@ function pollTelemetry(){
     if(detectedIp && detectedIp !== '192.168.4.1' && detectedIp !== '0.0.0.0'){
       localStorage.setItem('craftthingy_esp_last_sta_ip', detectedIp);
       updatePumpHostChips(detectedIp);
+    }
+
+    var sys = data.system || {};
+    var devName = sys.name || dev.role || 'craftthingy-water-pump';
+    var mdnsHost = devName.toLowerCase().replace(/[\s_]+/g, '-') + '.local';
+    var mdnsChip = document.getElementById('btnPumpMdns');
+    if(mdnsChip){
+      mdnsChip.textContent = '🌐 mDNS (' + mdnsHost + ')';
+      mdnsChip.onclick = function(){ setPumpHost(mdnsHost); };
     }
 
     var coreBanner = document.getElementById('baseCoreBanner');
