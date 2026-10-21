@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-CraftThingy Digital Innovation - Over-The-Air Rescue Bridge for ESP-01S v1.0.0
+CraftThingy Digital Innovation - Over-The-Air Rescue Bridge (v1.1.5 / Core v1.1.0)
 =============================================================================
-Bypasses the ESP8266 v1.0.0 BearSSL 4KB input buffer limit (BR_ERR_TOO_LARGE)
+Bypasses the ESP8266 legacy BearSSL 4KB input buffer limit (BR_ERR_TOO_LARGE)
 and AWS S3 TLS connection drops by acting as an all-in-one local chunked OTA
 server for both api.github.com and release-assets.githubusercontent.com.
 
@@ -12,6 +12,7 @@ Supports:
 2. 100% Over-the-air: No USB-to-UART cable or physical access needed.
 3. Safe Chunking: Streams binary in small 1024-byte TLS records with 5ms pacing.
 4. Multi-tier Auth: Tier 1 (HMAC-SHA256) with automatic Tier 2 (Bearer / Master) fallback.
+5. Multi-target Asset Resolution: Supports water_pump and core OTA binaries.
 
 Requirements:
     pip install cryptography
@@ -34,6 +35,9 @@ import urllib.error
 import urllib.parse
 from datetime import datetime, timezone, timedelta
 from typing import Tuple, Optional, Dict, Any
+
+TOOL_VERSION = "1.1.5"
+CORE_VERSION = "1.1.0"
 
 if hasattr(sys.stdout, "reconfigure"):
     try:
@@ -62,7 +66,7 @@ CERT_FILE = os.path.join(SCRIPT_DIR, "rescue_cert.pem")
 KEY_FILE = os.path.join(SCRIPT_DIR, "rescue_key.pem")
 
 
-def find_firmware_binary(custom_bin: Optional[str] = None) -> str:
+def find_firmware_binary(custom_bin: Optional[str] = None, tag: str = "v1.1.5", target: str = "water_pump") -> str:
     """Locates or downloads the rescue firmware binary."""
     if custom_bin and os.path.exists(custom_bin):
         return os.path.abspath(custom_bin)
@@ -70,6 +74,7 @@ def find_firmware_binary(custom_bin: Optional[str] = None) -> str:
     search_candidates = [
         os.path.join(SCRIPT_DIR, "..", "..", "craftthingy-esp-water-pump", ".pio", "build", "esp01_1m", "firmware.bin"),
         os.path.join(SCRIPT_DIR, "..", ".pio", "build", "esp01_1m", "firmware.bin"),
+        os.path.join(SCRIPT_DIR, "..", "..", "craftthingy-esp-core-ota", ".pio", "build", "esp01_1m", "firmware.bin"),
         os.path.join(os.getcwd(), ".pio", "build", "esp01_1m", "firmware.bin"),
         os.path.join(os.getcwd(), "firmware.bin"),
         os.path.join(SCRIPT_DIR, "firmware.bin"),
@@ -81,10 +86,17 @@ def find_firmware_binary(custom_bin: Optional[str] = None) -> str:
         if os.path.exists(cand):
             return os.path.abspath(cand)
 
-    # Attempt to download latest release asset if no local binary exists
-    release_url = "https://github.com/CraftThingy-Digital-Innovation/craftthingy-esp-water-pump/releases/latest/download/firmware-water_pump-esp01s.bin"
-    download_dest = os.path.join(SCRIPT_DIR, "firmware-water_pump-esp01s.bin")
-    print(f"[*] No local binary found. Downloading latest release from:\n    {release_url}")
+    # Attempt to download release asset from GitHub if no local binary exists
+    if target == "core":
+        repo = "craftthingy-esp-core-ota"
+        asset_name = "firmware-esp01s.bin"
+    else:
+        repo = "craftthingy-esp-water-pump"
+        asset_name = "firmware-water_pump-esp01s.bin"
+
+    release_url = f"https://github.com/CraftThingy-Digital-Innovation/{repo}/releases/download/{tag}/{asset_name}"
+    download_dest = os.path.join(SCRIPT_DIR, asset_name)
+    print(f"[*] No local binary found. Downloading {tag} release from:\n    {release_url}")
     try:
         urllib.request.urlretrieve(release_url, download_dest)
         if os.path.exists(download_dest) and os.path.getsize(download_dest) > 100000:
@@ -127,7 +139,7 @@ def send_signed_request(
     timeout: float = 6.0
 ) -> Tuple[Dict[str, Any], int]:
     """Sends authenticated request with Tier 1 HMAC-SHA256 and fallback Tier 2 Bearer token."""
-    body_str = json.dumps(body_data) if body_data else ""
+    body_str = json.dumps(body_data, separators=(',', ':')) if body_data else ""
     url = f"http://{host}{path}"
     curr_seq = sequence
     clean_uri = path.split("?")[0]
@@ -292,7 +304,7 @@ def dns_server_thread(local_ip: str, upstream_dns: str, stop_event: threading.Ev
     sock.close()
 
 
-def https_server_thread(bin_path: str, local_ip: str, stop_event: threading.Event, transfer_complete_event: threading.Event):
+def https_server_thread(bin_path: str, local_ip: str, stop_event: threading.Event, transfer_complete_event: threading.Event, tag: str = "v1.1.5"):
     """Paced TLS server serving 1024-byte chunked records acceptable by BearSSL 4KB buffer."""
     bin_size = os.path.getsize(bin_path)
     print(f"[+] Loaded firmware binary: {bin_path} ({bin_size} bytes)")
@@ -337,10 +349,10 @@ def https_server_thread(bin_path: str, local_ip: str, stop_event: threading.Even
             print(f"[HTTPS] Request: {first_line}")
 
             # Case A: GitHub API Release Check
-            if b"/releases/latest" in request:
+            if b"/releases/latest" in request or b"/releases/tags/" in request:
                 api_payload = json.dumps({
-                    "tag_name": "v1.1.5",
-                    "name": "CraftThingy Rescue Release v1.1.5",
+                    "tag_name": tag,
+                    "name": f"CraftThingy Rescue Release {tag}",
                     "draft": False,
                     "prerelease": False,
                     "assets": [
@@ -353,6 +365,21 @@ def https_server_thread(bin_path: str, local_ip: str, stop_event: threading.Even
                             "name": "firmware-esp01s.bin",
                             "size": bin_size,
                             "browser_download_url": "https://api.github.com/download/firmware-esp01s.bin"
+                        },
+                        {
+                            "name": "firmware-water_pump-esp32.bin",
+                            "size": bin_size,
+                            "browser_download_url": "https://api.github.com/download/firmware-water_pump-esp32.bin"
+                        },
+                        {
+                            "name": "firmware-esp32.bin",
+                            "size": bin_size,
+                            "browser_download_url": "https://api.github.com/download/firmware-esp32.bin"
+                        },
+                        {
+                            "name": "firmware.bin",
+                            "size": bin_size,
+                            "browser_download_url": "https://api.github.com/download/firmware.bin"
                         }
                     ]
                 }).encode("utf-8")
@@ -365,7 +392,7 @@ def https_server_thread(bin_path: str, local_ip: str, stop_event: threading.Even
                     f"\r\n"
                 ).encode("utf-8") + api_payload
                 ssl_conn.sendall(resp)
-                print(f"[HTTPS] Served simulated GitHub Releases API (v1.1.5, asset size: {bin_size} bytes)")
+                print(f"[HTTPS] Served simulated GitHub Releases API ({tag}, asset size: {bin_size} bytes)")
                 time.sleep(0.5)
                 try:
                     ssl_conn.close()
@@ -421,7 +448,8 @@ def run_rescue_flow(
     local_ip: str,
     gateway: str,
     wifi_ssid: Optional[str] = None,
-    wifi_pass: Optional[str] = None
+    wifi_pass: Optional[str] = None,
+    tag: str = "v1.1.5"
 ):
     """Executes the complete end-to-end OTA rescue flow."""
     stop_event = threading.Event()
@@ -432,11 +460,11 @@ def run_rescue_flow(
     t_dns = threading.Thread(target=dns_server_thread, args=(local_ip, gateway, stop_event), daemon=True)
     t_dns.start()
 
-    t_https = threading.Thread(target=https_server_thread, args=(bin_path, local_ip, stop_event, transfer_complete_event), daemon=True)
+    t_https = threading.Thread(target=https_server_thread, args=(bin_path, local_ip, stop_event, transfer_complete_event, tag), daemon=True)
     t_https.start()
 
     print("\n" + "="*70)
-    print("🚀 CRAFTTHINGY RESCUE BRIDGE ACTIVE! 100% OVER-THE-AIR RECOVERY")
+    print(f"🚀 CRAFTTHINGY RESCUE BRIDGE ACTIVE! 100% OVER-THE-AIR RECOVERY ({tag})")
     print(f"Target ESP: http://{esp_host} | Bridge IP: {local_ip}")
     print("="*70)
 
@@ -476,7 +504,7 @@ def run_rescue_flow(
                 except Exception as e:
                     print(f"[*] Notice on Wi-Fi provisioning: {e}")
             else:
-                print("[!] Notice: ESP v1.0.0 requires Wi-Fi STA connection to perform OTA.")
+                print("[!] Notice: ESP requires Wi-Fi STA connection to perform OTA.")
                 print("    If update check fails, provide --wifi-ssid <SSID> --wifi-pass <PASS>.")
         else:
             if current_dns == local_ip:
@@ -527,9 +555,11 @@ def run_rescue_flow(
                     time.sleep(3)
                     new_status, _ = send_signed_request(esp_host, "GET", "/api/v1/system/status", secret_key, sequence=1, timeout=4.0)
                     new_ver = new_status.get("data", {}).get("system", {}).get("coreVersion", "")
+                    app_ver = new_status.get("data", {}).get("system", {}).get("appVersion", "")
                     ctrl_role = new_status.get("data", {}).get("device", {}).get("role", "")
                     print("\n" + "="*70)
                     print(f"🎉 OTA UPGRADE COMPLETE OVER THE AIR!")
+                    print(f"App Version    : {app_ver or 'N/A'}")
                     print(f"Core Version   : {new_ver}")
                     print(f"Active Role    : {ctrl_role}")
                     print(f"Chip Target    : {new_status.get('data',{}).get('system',{}).get('boardTarget')}")
@@ -547,7 +577,7 @@ def run_rescue_flow(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="CraftThingy Over-The-Air Rescue Bridge for ESP v1.0.0",
+        description=f"CraftThingy Over-The-Air Rescue Bridge for ESP (v{TOOL_VERSION} / Core v{CORE_VERSION})",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -559,20 +589,26 @@ Examples:
 
   # Upgrading offline in the field using PC Mobile Hotspot:
   python tools/ota_rescue_bridge.py --esp 192.168.4.1 --wifi-ssid "RescueHotspot" --wifi-pass "12345678"
+
+  # Specifying target role and tag:
+  python tools/ota_rescue_bridge.py --esp 192.168.2.228 --target water_pump --tag v1.1.5
         """
     )
+    parser.add_argument("--version", action="version", version=f"CraftThingy Rescue Bridge v{TOOL_VERSION} (Core v{CORE_VERSION})")
     parser.add_argument("--esp", default="192.168.2.228", help="ESP IP address (default: 192.168.2.228, or 192.168.4.1 for AP mode)")
     parser.add_argument("--key", default=DEFAULT_SECRET, help="Master Secret Key")
     parser.add_argument("--bin", default=None, help="Path to firmware binary (default: auto-detected from build artifacts or latest release)")
+    parser.add_argument("--tag", default="v1.1.5", help="Release tag to simulate or download (default: v1.1.5)")
+    parser.add_argument("--target", default="water_pump", choices=["water_pump", "core"], help="Firmware target role (default: water_pump)")
     parser.add_argument("--bridge-ip", default=None, help="Host IP for rescue bridge (default: auto-detected)")
     parser.add_argument("--gateway", default="192.168.2.1", help="Network Gateway (default: 192.168.2.1)")
     parser.add_argument("--wifi-ssid", default=None, help="Wi-Fi SSID to provision ESP to during AP mode rescue")
     parser.add_argument("--wifi-pass", default=None, help="Wi-Fi password to provision ESP to during AP mode rescue")
     args = parser.parse_args()
 
-    bin_path = find_firmware_binary(args.bin)
+    bin_path = find_firmware_binary(args.bin, tag=args.tag, target=args.target)
     local_ip = args.bridge_ip or get_local_ip(args.esp)
-    run_rescue_flow(args.esp, args.key, bin_path, local_ip, args.gateway, args.wifi_ssid, args.wifi_pass)
+    run_rescue_flow(args.esp, args.key, bin_path, local_ip, args.gateway, args.wifi_ssid, args.wifi_pass, tag=args.tag)
 
 
 if __name__ == "__main__":

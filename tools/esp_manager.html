@@ -474,11 +474,23 @@
     return toast;
   }
 
+  function isValidIp(ip) {
+    if (!ip || typeof ip !== 'string') return false;
+    const clean = ip.trim();
+    if (clean.includes('unset') || clean === '0.0.0.0' || clean === '192.168.4.1' || clean === '--') return false;
+    const parts = clean.split('.');
+    if (parts.length !== 4) return false;
+    return parts.every(p => {
+      const n = Number(p);
+      return !isNaN(n) && n >= 0 && n <= 255 && p === n.toString();
+    });
+  }
+
   function updateHostChipLabels(ip) {
     const textEl = document.getElementById('chipStaIpText');
     const suggEl = document.getElementById('suggestedStaIp');
     const btnSwitch = document.getElementById('btnSwitchSta');
-    if (ip && ip !== '0.0.0.0' && ip !== '192.168.4.1') {
+    if (isValidIp(ip)) {
       if (textEl) textEl.textContent = ip;
       if (suggEl) suggEl.textContent = ip;
       if (btnSwitch) {
@@ -494,11 +506,11 @@
 
   function switchToSavedStaIp() {
     const lastSta = localStorage.getItem('craftthingy_esp_last_sta_ip');
-    if (lastSta && lastSta !== '192.168.4.1' && lastSta !== '0.0.0.0') {
+    if (isValidIp(lastSta)) {
       setHost(lastSta);
     } else {
       const promptIp = prompt("Enter your ESP's Home Wi-Fi IP (e.g. 192.168.1.150):");
-      if (promptIp && promptIp.trim()) {
+      if (promptIp && promptIp.trim() && isValidIp(promptIp.trim())) {
         setHost(promptIp.trim());
       }
     }
@@ -586,9 +598,11 @@
       document.getElementById('valRole').textContent = ota.activeRole || data.activeRole || "water_pump";
       document.getElementById('valWifi').textContent = net.state || data.wifiState || "ap_mode";
       document.getElementById('valApSsid').textContent = net.apSsid ? `${net.apSsid} ${net.apSecured ? '[🔒 WPA2]' : '[Open]'}` : (net.state === 'ap_mode' ? 'Broadcasting' : '--');
-      const staIp = net.ip || net.staIp;
-      if (net.state === 'connected' && staIp && staIp !== '0.0.0.0' && staIp !== '192.168.4.1') {
-        document.getElementById('valIp').textContent = `${staIp} (AP: ${net.apIp || '192.168.4.1'})`;
+      const rawSta = net.staIp || (net.state === 'connected' ? net.ip : null);
+      const staIp = isValidIp(rawSta) ? rawSta : null;
+      if (net.state === 'connected' && staIp) {
+        const apDisplay = isValidIp(net.apIp) ? net.apIp : '--';
+        document.getElementById('valIp').textContent = `${staIp} (AP: ${apDisplay})`;
         const banner = document.getElementById('lanDiscoveryBanner');
         banner.style.display = 'block';
         document.getElementById('discoveredSsid').textContent = net.ssid || "Home Wi-Fi";
@@ -598,7 +612,8 @@
         document.getElementById('discoveredMdns').textContent = `http://${hostName}.local`;
         document.getElementById('openNewIpLink').href = `http://${staIp}`;
       } else {
-        document.getElementById('valIp').textContent = net.ip || data.ip || "192.168.4.1";
+        const fallbackIp = isValidIp(net.ip) ? net.ip : (isValidIp(net.apIp) ? net.apIp : "192.168.4.1");
+        document.getElementById('valIp').textContent = fallbackIp;
       }
 
       if (net.useStatic !== undefined && !document.getElementById('useStaticIp').dataset.userTouched) {
@@ -741,9 +756,10 @@
         const json = await apiRequest('GET', '/api/v1/system/status');
         const data = json.data || json;
         const net = data.network || {};
-        const staIp = net.staIp || (net.state === 'connected' ? net.ip : null);
+        const rawSta = net.staIp || (net.state === 'connected' ? net.ip : null);
+        const staIp = isValidIp(rawSta) ? rawSta : null;
 
-        if (net.state === 'connected' && staIp && staIp !== '0.0.0.0' && staIp !== '192.168.4.1') {
+        if (net.state === 'connected' && staIp) {
           clearInterval(discoveryInterval);
           discoveryInterval = null;
           log(`🎉 ESP Successfully connected to ${ssid}! Dynamic Router IP: ${staIp}`);
@@ -1001,14 +1017,25 @@
   }
 
   window.onload = () => {
-    const lastSta = localStorage.getItem('craftthingy_esp_last_sta_ip');
+    let lastSta = localStorage.getItem('craftthingy_esp_last_sta_ip');
+    if (lastSta && !isValidIp(lastSta)) {
+      localStorage.removeItem('craftthingy_esp_last_sta_ip');
+      lastSta = null;
+    }
     updateHostChipLabels(lastSta);
 
-    const savedHost = localStorage.getItem('craftthingy_esp_host');
+    let savedHost = localStorage.getItem('craftthingy_esp_host');
+    if (savedHost && (savedHost.includes('unset') || !savedHost.trim())) {
+      localStorage.removeItem('craftthingy_esp_host');
+      savedHost = null;
+    }
+
     if (savedHost) {
       document.getElementById('espHost').value = savedHost;
-    } else if (lastSta && lastSta !== '192.168.4.1' && lastSta !== '0.0.0.0') {
+    } else if (isValidIp(lastSta)) {
       document.getElementById('espHost').value = lastSta;
+    } else {
+      document.getElementById('espHost').value = '192.168.4.1';
     }
     fetchStatus();
   };
