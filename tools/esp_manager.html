@@ -400,6 +400,136 @@
     </div>
   </div>
 
+  <!-- Global Hardware Pin Mapping Card -->
+  <div class="card" id="pinConfigCard">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--border); padding-bottom:8px;">
+      <h2 style="color:var(--accent); margin-bottom:0; border:none; padding:0;">6. Hardware Pin Mapping & Board Layout</h2>
+      <span id="pinBoardBadge" class="badge" style="background:rgba(56,189,248,0.15); color:var(--accent); font-size:0.8rem;">DETECTING...</span>
+    </div>
+    <p style="font-size:0.85rem; color:var(--text-dim); margin-bottom:14px; line-height:1.4;">
+      Configure physical GPIO pins for the active firmware module. Settings are saved in persistent EEPROM/NVS and <strong>never reset when updating firmware via OTA</strong>.
+    </p>
+
+    <div id="dynamicPinRolesContainer" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
+      <div style="color:var(--text-dim); font-size:0.85rem; grid-column:span 2;">Connect and click 'Refresh Status' to load hardware pins...</div>
+    </div>
+
+    <div id="pinWarningBox" style="display:none; background:#451a03; border:1px solid #f59e0b; border-left:4px solid #fbbf24; border-radius:6px; padding:10px 14px; font-size:0.82rem; color:#fef3c7; margin-bottom:14px; line-height:1.4;"></div>
+
+    <div class="btn-group">
+      <button style="background:var(--accent); color:#000;" onclick="saveDynamicPins()">💾 Save & Persist Pin Mapping</button>
+      <button class="secondary" onclick="fetchHardwarePins()">🔄 Refresh Pin Layout</button>
+    </div>
+  </div>
+
+  <!-- Adaptive Live Hardware & Controller Operations Card -->
+  <div class="card" style="border-color: #f59e0b;" id="ctrlCard">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--border); padding-bottom:8px;">
+      <h2 style="color: #fbbf24; margin-bottom:0; border:none; padding:0;" id="ctrlCardTitle">7. Hardware Controller Telemetry & Actions</h2>
+      <span id="ctrlRoleBadge" class="badge" style="background:rgba(251,191,36,0.15); color:#fbbf24; font-size:0.8rem;">WATER_PUMP</span>
+    </div>
+
+    <!-- 1. Dedicated Water Pump Section -->
+    <div id="sectionWaterPump">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; background:#0b1120; padding:8px 12px; border-radius:8px; border:1px solid var(--border);">
+        <div style="font-size:0.82rem; color:var(--text-dim);">
+          Hardware Schema: <strong id="pumpHwSchema" style="color:#c084fc;">PROBING...</strong>
+          <span id="pumpRiseTime" style="font-family:monospace; margin-left:6px; font-size:0.75rem; color:#94a3b8;"></span>
+        </div>
+        <span id="pzemStatusBadge" class="badge" style="background:rgba(168,85,247,0.18); color:#c084fc;">PZEM-004T</span>
+      </div>
+
+      <div class="status-grid" style="margin-bottom:14px;">
+        <div class="status-item"><div class="label">Pump Relay</div><div class="val" id="ctrlRunning" style="color:#22c55e;">STOPPED</div></div>
+        <div class="status-item"><div class="label">Control Mode</div><div class="val" id="ctrlMode">AUTO</div></div>
+        <div class="status-item"><div class="label">Water Float Sensor</div><div class="val" id="ctrlSensor">IDLE</div></div>
+        <div class="status-item"><div class="label">Run Duration</div><div class="val" id="ctrlDuration">0s</div></div>
+      </div>
+
+      <!-- Live PZEM-004T Electrical Instrumentation -->
+      <div id="pzemTelemetryBox" style="background:#0b1120; border:1px solid rgba(168,85,247,0.25); border-radius:10px; padding:12px; margin-bottom:14px;">
+        <div style="font-size:0.8rem; font-weight:700; color:#c084fc; margin-bottom:10px; display:flex; justify-content:space-between;">
+          <span>⚡ Live PZEM-004T Electrical Readouts</span>
+          <span id="pzemAcAlert" style="color:#22c55e; font-size:0.75rem;">AC 220V OK</span>
+        </div>
+        <div class="status-grid" style="margin-bottom:10px;">
+          <div class="status-item"><div class="label">AC Voltage</div><div class="val" id="pzemVolt">-- V <span id="pzemFreq" style="font-size:0.75rem; color:var(--text-dim);"></span></div></div>
+          <div class="status-item"><div class="label">Current (RMS)</div><div class="val" id="pzemCurrent">-- A</div></div>
+          <div class="status-item"><div class="label">Active Power</div><div class="val" id="pzemPower">-- W <span id="pzemPf" style="font-size:0.75rem; color:var(--text-dim);"></span></div></div>
+          <div class="status-item"><div class="label">Accumulated Energy</div><div class="val" id="pzemEnergy">-- kWh</div></div>
+        </div>
+        <div style="margin-top:8px;">
+          <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:4px;">
+            <span style="color:var(--text-dim);">House Power Load (1300W Budget)</span>
+            <span id="pzemHousePct" style="color:var(--accent); font-weight:700;">0%</span>
+          </div>
+          <div style="width:100%; height:7px; background:#1e293b; border-radius:99px; overflow:hidden;">
+            <div id="pzemHouseBar" style="width:0%; height:100%; background:linear-gradient(90deg, #38bdf8, #10b981, #f59e0b); transition:width 0.5s;"></div>
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size:0.85rem; color:var(--text-dim); margin-bottom:12px;">
+        Manage pump automation, force relay override, or trigger instant emergency interruption:
+      </p>
+      <div class="btn-group">
+        <button class="danger" style="background:#dc2626; color:#fff; font-size:1rem; font-weight:700;" onclick="sendControllerCommand('interrupt')">🚨 EMERGENCY STOP</button>
+        <button style="background:#16a34a; color:#fff; font-weight:700;" onclick="sendControllerCommand('start')">▶️ FORCE PUMP ON</button>
+        <button class="secondary" onclick="sendControllerCommand('auto')">🔄 RESUME AUTO</button>
+        <button class="secondary" onclick="sendControllerCommand('reset_safety')">🛡️ RESET ALARM</button>
+        <button class="secondary" onclick="sendControllerCommand('reprobe')">⚡ RE-PROBE HW</button>
+      </div>
+
+      <div style="margin-top:14px; padding-top:10px; border-top:1px dashed var(--border); text-align:right;">
+        <a href="water_pump_manager.html" target="_blank" style="color:var(--accent); font-size:0.82rem; text-decoration:none; font-weight:600;">
+          🌊 Open Full Dedicated Water Pump & Animated Tank Dashboard →
+        </a>
+      </div>
+    </div>
+
+    <!-- 2. Dedicated Washing Machine Section -->
+    <div id="sectionWashingMachine" style="display:none;">
+      <div class="status-grid" style="margin-bottom:16px;">
+        <div class="status-item"><div class="label">Cycle State</div><div class="val" id="wmState" style="color:var(--accent);">IDLE</div></div>
+        <div class="status-item"><div class="label">Motor / Drum</div><div class="val" id="wmMotor">OFF</div></div>
+        <div class="status-item"><div class="label">Water Inflow Valve</div><div class="val" id="wmValve">CLOSED</div></div>
+        <div class="status-item"><div class="label">Door Safety Lock</div><div class="val" id="wmDoor">LOCKED</div></div>
+      </div>
+      <div class="btn-group">
+        <button style="background:#16a34a; color:#fff; font-weight:700;" onclick="sendControllerCommand('start')">▶️ START CYCLE</button>
+        <button class="secondary" onclick="sendControllerCommand('pause')">⏸️ PAUSE</button>
+        <button class="secondary" onclick="sendControllerCommand('drain')">💧 DRAIN</button>
+        <button class="danger" onclick="sendControllerCommand('stop')">🚨 EMERGENCY STOP</button>
+      </div>
+    </div>
+
+    <!-- 3. Standalone Core Section -->
+    <div id="sectionCore" style="display:none; text-align:center; padding:16px 8px;">
+      <div style="font-size:1.05rem; color:var(--accent); font-weight:600; margin-bottom:6px;">⚙️ Standalone Core Framework Active</div>
+      <p style="font-size:0.85rem; color:var(--text-dim); max-width:480px; margin:0 auto 12px auto;">
+        No physical appliance controller is attached to this board. It is running in base OTA mode, ready to be switched to any controller application via GitHub OTA above.
+      </p>
+    </div>
+
+    <!-- 4. Dynamic Generic / Custom Controller Section -->
+    <div id="sectionCustom" style="display:none;">
+      <div id="customTelemetryGrid" class="status-grid" style="margin-bottom:16px;"></div>
+      <p style="font-size:0.85rem; color:var(--text-dim); margin-bottom:10px;">
+        Interactive Command Dispatcher (Dispatches to controller <code>handleCommand()</code>):
+      </p>
+      <div class="btn-group" style="margin-bottom:12px;">
+        <button class="secondary" onclick="sendControllerCommand('start')">Start</button>
+        <button class="secondary" onclick="sendControllerCommand('stop')">Stop</button>
+        <button class="secondary" onclick="sendControllerCommand('reset')">Reset</button>
+        <button class="secondary" onclick="sendControllerCommand('status')">Status</button>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <input type="text" id="customCmdInput" placeholder="Enter custom command (e.g. trigger, calibrate, toggle_led)">
+        <button style="flex:0 0 140px;" onclick="sendCustomCommand()">Send Command</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Activity Console -->
   <div class="card">
     <h2>Activity Console</h2>
@@ -667,6 +797,151 @@
         }
       }
 
+      // Adaptive Controller UI Switching
+      const roleBadge = document.getElementById('ctrlRoleBadge');
+      const secWater = document.getElementById('sectionWaterPump');
+      const secWash = document.getElementById('sectionWashingMachine');
+      const secCore = document.getElementById('sectionCore');
+      const secCustom = document.getElementById('sectionCustom');
+      const ctrl = data.device || data.controller || null;
+
+      if (roleBadge) roleBadge.textContent = currentRole.toUpperCase();
+
+      if (currentRole === 'water_pump') {
+        if (secWater) secWater.style.display = 'block';
+        if (secWash) secWash.style.display = 'none';
+        if (secCore) secCore.style.display = 'none';
+        if (secCustom) secCustom.style.display = 'none';
+
+        if (ctrl) {
+          const isRunning = ctrl.pumpRunning || ctrl.motorActive;
+          const runningEl = document.getElementById('ctrlRunning');
+          if (runningEl) {
+            runningEl.textContent = isRunning ? 'RUNNING' : 'STOPPED';
+            runningEl.style.color = isRunning ? '#22c55e' : '#94a3b8';
+          }
+
+          let modeText = 'AUTO';
+          if (ctrl.interrupted) modeText = 'INTERRUPTED (STOPPED)';
+          else if (!ctrl.autoMode) modeText = 'MANUAL';
+          if (ctrl.dryRunAlarm) modeText += ' [SAFETY TRIPPED]';
+          const modeEl = document.getElementById('ctrlMode');
+          if (modeEl) modeEl.textContent = modeText;
+
+          if (ctrl.tankDemandsFill !== undefined) {
+            const sensorEl = document.getElementById('ctrlSensor');
+            if (sensorEl) {
+              sensorEl.textContent = ctrl.tankDemandsFill ? 'LOW (FILL REQUIRED)' : 'FULL / NORMAL';
+              sensorEl.style.color = ctrl.tankDemandsFill ? '#f59e0b' : '#22c55e';
+            }
+          }
+          if (ctrl.runDurationSec !== undefined) {
+            const durEl = document.getElementById('ctrlDuration');
+            if (durEl) durEl.textContent = `${ctrl.runDurationSec}s`;
+          }
+
+          // Hardware Schema Auto-detection
+          if (ctrl.hardwareSchema) {
+            const sName = ctrl.hardwareSchema.toUpperCase().replace(/_/g, ' ');
+            const schemaEl = document.getElementById('pumpHwSchema');
+            if (schemaEl) schemaEl.textContent = sName;
+            const riseEl = document.getElementById('pumpRiseTime');
+            if (riseEl) riseEl.textContent = ctrl.riseTimeUs !== undefined ? `(${ctrl.riseTimeUs} µs rise)` : '';
+            const pzemBadge = document.getElementById('pzemStatusBadge');
+            if (pzemBadge) {
+              pzemBadge.textContent = ctrl.hasPzem ? (ctrl.pzemOnline ? 'PZEM ONLINE' : 'PZEM OFFLINE') : 'LEGACY WIRING';
+              pzemBadge.style.color = ctrl.hasPzem ? (ctrl.pzemOnline ? '#22c55e' : '#f43f5e') : '#94a3b8';
+            }
+          }
+
+          // PZEM-004T Electrical Readouts
+          const pzemBox = document.getElementById('pzemTelemetryBox');
+          if (pzemBox) {
+            pzemBox.style.opacity = ctrl.hasPzem ? '1' : '0.4';
+            const voltEl = document.getElementById('pzemVolt');
+            if (voltEl && voltEl.childNodes[0]) voltEl.childNodes[0].nodeValue = `${(ctrl.voltage || 0).toFixed(1)} V `;
+            const freqEl = document.getElementById('pzemFreq');
+            if (freqEl) freqEl.textContent = `(${(ctrl.frequency || 50).toFixed(1)} Hz)`;
+            const currEl = document.getElementById('pzemCurrent');
+            if (currEl) currEl.textContent = `${(ctrl.current || 0).toFixed(3)} A`;
+            const pwr = ctrl.power || 0;
+            const pwrEl = document.getElementById('pzemPower');
+            if (pwrEl && pwrEl.childNodes[0]) pwrEl.childNodes[0].nodeValue = `${pwr.toFixed(1)} W `;
+            const pfEl = document.getElementById('pzemPf');
+            if (pfEl) pfEl.textContent = `(PF: ${(ctrl.powerFactor || 0).toFixed(2)})`;
+            const energyEl = document.getElementById('pzemEnergy');
+            if (energyEl) energyEl.textContent = `${(ctrl.energy || 0).toFixed(3)} kWh`;
+
+            // 1300W House Budget Bar
+            const pct = Math.min(100, Math.round((pwr / 1300) * 100));
+            const barEl = document.getElementById('pzemHouseBar');
+            if (barEl) barEl.style.width = `${pct}%`;
+            const housePctEl = document.getElementById('pzemHousePct');
+            if (housePctEl) housePctEl.textContent = `${pct}% (${pwr.toFixed(0)}W / 1300W)`;
+
+            const alertEl = document.getElementById('pzemAcAlert');
+            if (alertEl) {
+              if (ctrl.acPowerAlert) {
+                alertEl.textContent = '⚠️ AC MAINS LOST';
+                alertEl.style.color = '#ef4444';
+              } else {
+                alertEl.textContent = 'AC 220V OK';
+                alertEl.style.color = '#22c55e';
+              }
+            }
+          }
+        }
+      } else if (currentRole === 'washing_machine') {
+        if (secWater) secWater.style.display = 'none';
+        if (secWash) secWash.style.display = 'block';
+        if (secCore) secCore.style.display = 'none';
+        if (secCustom) secCustom.style.display = 'none';
+
+        if (ctrl) {
+          const wmStateEl = document.getElementById('wmState');
+          if (wmStateEl) wmStateEl.textContent = ctrl.cycleState || 'IDLE';
+          const wmMotorEl = document.getElementById('wmMotor');
+          if (wmMotorEl) wmMotorEl.textContent = ctrl.motorActive ? `ACTIVE (${ctrl.drumRpm || 0} RPM)` : 'OFF';
+          const wmValveEl = document.getElementById('wmValve');
+          if (wmValveEl) wmValveEl.textContent = ctrl.waterValveOpen ? 'OPEN' : 'CLOSED';
+          const wmDoorEl = document.getElementById('wmDoor');
+          if (wmDoorEl) wmDoorEl.textContent = ctrl.doorLocked ? 'LOCKED' : 'UNLOCKED';
+        }
+      } else if (currentRole === 'core' || currentRole === 'none' || !ctrl) {
+        if (secWater) secWater.style.display = 'none';
+        if (secWash) secWash.style.display = 'none';
+        if (secCore) secCore.style.display = 'block';
+        if (secCustom) secCustom.style.display = 'none';
+      } else {
+        if (secWater) secWater.style.display = 'none';
+        if (secWash) secWash.style.display = 'none';
+        if (secCore) secCore.style.display = 'none';
+        if (secCustom) secCustom.style.display = 'block';
+
+        const customGrid = document.getElementById('customTelemetryGrid');
+        if (customGrid) {
+          customGrid.innerHTML = '';
+          if (ctrl && typeof ctrl === 'object') {
+            for (const [k, v] of Object.entries(ctrl)) {
+              const item = document.createElement('div');
+              item.className = 'status-item';
+              const lbl = document.createElement('div');
+              lbl.className = 'label';
+              lbl.textContent = k.replace(/([A-Z])/g, ' $1');
+              const val = document.createElement('div');
+              val.className = 'val';
+              val.textContent = typeof v === 'boolean' ? (v ? 'TRUE' : 'FALSE') : (typeof v === 'object' ? JSON.stringify(v) : v);
+              if (typeof v === 'boolean' && v) val.style.color = '#22c55e';
+              item.appendChild(lbl);
+              item.appendChild(val);
+              customGrid.appendChild(item);
+            }
+          }
+        }
+      }
+
+      // Automatically fetch dynamic hardware pin definitions
+      fetchHardwarePins();
       log(`Status updated successfully. ESP IP: ${net.ip || data.ip || '192.168.4.1'}`);
     } catch (e) {
       log(`Error fetching status: ${e.message}`);
@@ -681,6 +956,154 @@
       showToast('error', 'Connection Failed', `Could not reach ESP at ${host}. ${hint}`, 5000);
     }
   }
+  // -----------------------------------------------------------------
+  // Global Hardware Pin Mapping & Board Layout Management
+  // -----------------------------------------------------------------
+  let cachedHardwarePins = null;
+
+  async function fetchHardwarePins() {
+    try {
+      const res = await apiRequest('GET', '/api/v1/hardware/pins');
+      const data = res.data || res;
+      cachedHardwarePins = data;
+      renderHardwarePins(data);
+    } catch (e) {
+      log(`[Pin Manager] Hardware pins not yet loaded: ${e.message}`);
+    }
+  }
+
+  function renderHardwarePins(data) {
+    if (!data) return;
+    const badge = document.getElementById('pinBoardBadge');
+    if (badge) badge.textContent = `${data.chip || 'ESP'} (${data.boardTarget || 'generic'})`;
+
+    const container = document.getElementById('dynamicPinRolesContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const availablePins = data.availablePins || [];
+    const roles = data.roles || [];
+
+    if (roles.length === 0) {
+      container.innerHTML = '<div style="color:var(--text-dim); font-size:0.85rem; grid-column:span 2;">No configurable pin roles registered by this firmware module.</div>';
+      return;
+    }
+
+    roles.forEach(r => {
+      const wrapper = document.createElement('div');
+      const label = document.createElement('label');
+      label.style.fontSize = '0.82rem';
+      label.style.fontWeight = '600';
+      label.textContent = r.label || r.role;
+      wrapper.appendChild(label);
+
+      const select = document.createElement('select');
+      select.id = `rolePin_${r.role}`;
+      select.dataset.role = r.role;
+      select.onchange = checkPinWarnings;
+
+      availablePins.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.gpio;
+        let optText = `${p.name} (GPIO ${p.gpio})`;
+        if (p.capabilities & 0x04) optText += ' ⚠️ [Boot Strapping]';
+        if (p.capabilities & 0x10) optText += ' ℹ️ [Serial UART]';
+        if (p.capabilities & 0x08) optText += ' [Input Only]';
+        opt.textContent = optText;
+
+        if ((r.requiredCaps & 0x02) && (p.capabilities & 0x08)) {
+          opt.disabled = true;
+          opt.textContent += ' (Not Output Capable)';
+        }
+
+        if (p.gpio === r.gpio) {
+          opt.selected = true;
+        }
+        select.appendChild(opt);
+      });
+
+      wrapper.appendChild(select);
+      container.appendChild(wrapper);
+    });
+
+    checkPinWarnings();
+  }
+
+  function checkPinWarnings() {
+    if (!cachedHardwarePins) return;
+    const warnBox = document.getElementById('pinWarningBox');
+    if (!warnBox) return;
+
+    const availablePins = cachedHardwarePins.availablePins || [];
+    const roles = cachedHardwarePins.roles || [];
+    let warnings = [];
+
+    roles.forEach(r => {
+      const select = document.getElementById(`rolePin_${r.role}`);
+      if (!select) return;
+      const chosenGpio = parseInt(select.value, 10);
+      const pinObj = availablePins.find(p => p.gpio === chosenGpio);
+      if (pinObj && pinObj.warning && pinObj.warning.length > 0) {
+        warnings.push(`<strong>${r.label || r.role}</strong> on <code>${pinObj.name}</code>: ${pinObj.warning}`);
+      }
+    });
+
+    if (warnings.length > 0) {
+      warnBox.innerHTML = `⚠️ <strong>Hardware Layout Notices:</strong><br>` + warnings.join('<br>');
+      warnBox.style.display = 'block';
+    } else {
+      warnBox.style.display = 'none';
+    }
+  }
+
+  async function saveDynamicPins() {
+    if (!cachedHardwarePins || !cachedHardwarePins.roles) return;
+    const rolesPayload = [];
+    const roles = cachedHardwarePins.roles;
+
+    for (const r of roles) {
+      const select = document.getElementById(`rolePin_${r.role}`);
+      if (select) {
+        rolesPayload.push({
+          role: r.role,
+          gpio: parseInt(select.value, 10)
+        });
+      }
+    }
+
+    try {
+      const res = await apiRequest('POST', '/api/v1/hardware/pins', { roles: rolesPayload });
+      log("Hardware pin mapping successfully updated and saved in EEPROM!");
+      showToast('success', 'Pins Saved', 'Hardware pins updated in EEPROM and preserved across OTA updates.');
+      fetchHardwarePins();
+      setTimeout(fetchStatus, 500);
+    } catch (e) {
+      log(`Error saving hardware pins: ${e.message}`);
+      showToast('error', 'Pin Error', e.message);
+    }
+  }
+
+  function sendCustomCommand() {
+    const cmd = document.getElementById('customCmdInput').value.trim();
+    if (!cmd) { alert("Please enter a command"); return; }
+    sendControllerCommand(cmd);
+    document.getElementById('customCmdInput').value = '';
+  }
+
+  async function sendControllerCommand(cmd) {
+    try {
+      log(`Sending command '${cmd}' to controller...`);
+      const res = await apiRequest('POST', '/api/v1/device/command', { cmd });
+      const msg = res.data?.message || res.message || (res.status === 'success' ? 'Command executed successfully' : JSON.stringify(res));
+      log(`Result: ${msg}`);
+      showToast('info', 'Command Dispatched', `${cmd.toUpperCase()}: ${msg}`);
+      setTimeout(fetchStatus, 300);
+    } catch (e) {
+      log(`Command failed: ${e.message}`);
+      showToast('error', 'Command Failed', e.message);
+    }
+  }
+
   function onRepoPresetChanged() {
     const preset = document.getElementById('repoPreset').value;
     const org = document.getElementById('ghOrg');
