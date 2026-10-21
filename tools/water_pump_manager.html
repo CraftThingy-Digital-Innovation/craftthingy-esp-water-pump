@@ -128,6 +128,21 @@ body{
   font-weight:700;
   cursor:pointer;
 }
+.chip-btn{
+  background:rgba(11,17,32,0.8);
+  border:1px solid rgba(255,255,255,0.1);
+  color:var(--text-dim);
+  font-size:0.75rem;
+  padding:4px 10px;
+  border-radius:999px;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+.chip-btn:hover{
+  border-color:var(--cyan);
+  color:#fff;
+  background:rgba(56,189,248,0.15);
+}
 
 /* Schema Sub-bar */
 .schema-bar{
@@ -391,8 +406,26 @@ input:focus{border-color:var(--cyan)}
   <!-- Target Connection IP Bar -->
   <div class="target-bar">
     <span style="font-size:0.8rem;color:var(--text-dim)">Device Host/IP:</span>
-    <input type="text" id="targetHostInput" value="192.168.4.1">
+    <input type="text" id="targetHostInput" value="192.168.4.1" placeholder="e.g. 192.168.1.100 or craftthingy.local">
     <button class="btn-connect" onclick="reconnectTarget()">Sync</button>
+  </div>
+  <div style="display:flex;gap:6px;margin-top:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+    <span style="font-size:0.75rem;color:var(--text-dim)">Quick Select:</span>
+    <button type="button" class="chip-btn" id="btnPumpHomeWifi" onclick="switchToPumpStaIp()">🏠 Home Wi-Fi (<span id="pumpStaIpText">Saved IP</span>)</button>
+    <button type="button" class="chip-btn" onclick="setPumpHost('craftthingy.local')">🌐 mDNS (craftthingy.local)</button>
+    <button type="button" class="chip-btn" onclick="setPumpHost('192.168.4.1')">📶 Setup Hotspot (192.168.4.1)</button>
+  </div>
+
+  <!-- Unreachable Notice Banner -->
+  <div id="pumpUnreachableBanner" style="display:none;background:#450a0a;border:1px solid #ef4444;border-left:4px solid #f87171;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:0.85rem;line-height:1.5;">
+    <strong style="color:#f87171;">⚠️ Device Unreachable at <span id="pumpUnreachableIp">192.168.4.1</span></strong>
+    <p style="color:#fecaca;margin:4px 0 8px 0;font-size:0.8rem">
+      If your pump controller is already connected to your home Wi-Fi, it cannot be reached at 192.168.4.1.
+    </p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button type="button" class="btn-secondary" style="font-size:0.75rem;padding:6px 12px;background:#ef4444;color:#fff;" onclick="switchToPumpStaIp()">👉 Switch to Home Wi-Fi IP</button>
+      <button type="button" class="btn-secondary" style="font-size:0.75rem;padding:6px 12px;" onclick="setPumpHost('craftthingy.local')">🌐 Try mDNS (craftthingy.local)</button>
+    </div>
   </div>
 
   <!-- Schema & Live Info Bar -->
@@ -554,14 +587,38 @@ function showAlert(txt,isErr){
   el.style.display='block';
   setTimeout(function(){el.style.display='none';},4000);
 }
+function setPumpHost(host){
+  document.getElementById('targetHostInput').value=host;
+  targetHost=host;
+  localStorage.setItem('craft_pump_host',host);
+  document.getElementById('ipSubtext').textContent='Target: '+host;
+  pollTelemetry();
+  showAlert('Target changed to '+host,false);
+}
+
+function updatePumpHostChips(ip){
+  var textEl=document.getElementById('pumpStaIpText');
+  if(ip && ip !== '0.0.0.0' && ip !== '192.168.4.1'){
+    if(textEl) textEl.textContent=ip;
+  } else {
+    if(textEl) textEl.textContent='Saved IP';
+  }
+}
+
+function switchToPumpStaIp(){
+  var lastSta=localStorage.getItem('craftthingy_esp_last_sta_ip')||localStorage.getItem('craft_pump_host');
+  if(lastSta && lastSta!=='192.168.4.1' && lastSta!=='0.0.0.0'){
+    setPumpHost(lastSta);
+  } else {
+    var p=prompt("Enter your pump controller's Home Wi-Fi IP (e.g. 192.168.1.150):");
+    if(p && p.trim()) setPumpHost(p.trim());
+  }
+}
+
 function reconnectTarget(){
   var host=document.getElementById('targetHostInput').value.trim();
   if(host){
-    targetHost=host;
-    localStorage.setItem('craft_pump_host',host);
-    document.getElementById('ipSubtext').textContent='Target: '+host;
-    pollTelemetry();
-    showAlert('Target updated to '+host,false);
+    setPumpHost(host);
   }
 }
 function formatSec(s){
@@ -664,6 +721,17 @@ function pollTelemetry(){
     document.getElementById('wattBarFill').style.width=pct+'%';
     document.getElementById('wattPctText').textContent=pct+'% ('+pwr.toFixed(0)+'W / 1300W)';
 
+    var unreach = document.getElementById('pumpUnreachableBanner');
+    if(unreach) unreach.style.display='none';
+
+    if(dev.staIp || dev.ip){
+      var detected = dev.staIp || dev.ip;
+      if(detected && detected !== '192.168.4.1' && detected !== '0.0.0.0'){
+        localStorage.setItem('craftthingy_esp_last_sta_ip', detected);
+        updatePumpHostChips(detected);
+      }
+    }
+
     var acAlert=document.getElementById('acAlertBadge');
     if(dev.acPowerAlert){
       acAlert.textContent='⚠️ MAINS LOST';
@@ -683,6 +751,11 @@ function pollTelemetry(){
       sBadge.textContent='UNREACHABLE';
       sBadge.className='badge badge-legacy';
     }
+    var unreach=document.getElementById('pumpUnreachableBanner');
+    if(unreach){
+      document.getElementById('pumpUnreachableIp').textContent=targetHost;
+      unreach.style.display='block';
+    }
   });
 }
 
@@ -696,6 +769,15 @@ function saveMasterKey(){
 }
 
 window.onload=function(){
+  var lastSta = localStorage.getItem('craftthingy_esp_last_sta_ip');
+  updatePumpHostChips(lastSta);
+
+  var savedHost = localStorage.getItem('craft_pump_host');
+  if(savedHost){
+    targetHost = savedHost;
+  } else if(lastSta && lastSta !== '192.168.4.1' && lastSta !== '0.0.0.0'){
+    targetHost = lastSta;
+  }
   document.getElementById('targetHostInput').value=targetHost;
   document.getElementById('ipSubtext').textContent='Target: '+targetHost;
   document.getElementById('masterKeyInput').value=activeKey;
