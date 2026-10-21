@@ -440,8 +440,21 @@ input:focus{border-color:var(--cyan)}
     </div>
   </div>
 
+  <!-- Base Core Mode Active Notice -->
+  <div id="baseCoreBanner" style="display:none; background:#0b1120; border:1px solid #38bdf8; border-left:4px solid #38bdf8; border-radius:12px; padding:18px; margin-bottom:16px; text-align:center;">
+    <div style="font-size:1.15rem; font-weight:700; color:#38bdf8; margin-bottom:6px;">⚙️ Base Core OTA Framework Active</div>
+    <p style="font-size:0.85rem; color:var(--text-dim); max-width:520px; margin:0 auto 14px auto; line-height:1.5;">
+      This ESP is running the generic <strong>craftthingy-esp-core-ota</strong> firmware shell. The dedicated Water Pump appliance software is not installed on the chip yet.
+    </p>
+    <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
+      <a href="#" id="openCoreSetupLink" target="_blank" style="text-decoration:none; background:#0284c7; color:#fff; font-size:0.85rem; font-weight:700; padding:10px 18px; border-radius:8px;">
+        🚀 Open Device Portal to Flash Water Pump &rarr;
+      </a>
+    </div>
+  </div>
+
   <!-- Hero Water Tank + Pump State -->
-  <div class="card">
+  <div class="card" id="heroTankCard">
     <div class="hero-tank">
       <div class="tank-visual-wrap">
         <div class="tank-visual">
@@ -650,15 +663,32 @@ function pollTelemetry(){
     pill.className='live-pill';
     liveText.textContent='CONNECTED';
 
-    if(d.status==='error'||(!d.hardwareSchema&&!(d.data&&d.data.hardwareSchema))){
-      var sBadge=document.getElementById('schemaBadge');
+    var isBaseCore = (d.status==='error'||(!d.hardwareSchema&&!(d.data&&d.data.hardwareSchema)));
+    var coreBanner = document.getElementById('baseCoreBanner');
+    var heroCard = document.getElementById('heroTankCard');
+    var pzemCard = document.getElementById('pzemCard');
+    var hwDrawer = document.getElementById('hwDrawer');
+    var sBadge = document.getElementById('schemaBadge');
+
+    if(isBaseCore){
       sBadge.textContent='BASE CORE MODE (No Pump App)';
       sBadge.className='badge badge-legacy';
+      if(coreBanner){
+        coreBanner.style.display='block';
+        var link = document.getElementById('openCoreSetupLink');
+        if(link) link.href='http://'+targetHost;
+      }
+      if(heroCard) heroCard.style.display='none';
+      if(pzemCard) pzemCard.style.display='none';
+      if(hwDrawer) hwDrawer.style.display='none';
       return;
     }
 
+    if(coreBanner) coreBanner.style.display='none';
+    if(heroCard) heroCard.style.display='block';
+    if(hwDrawer) hwDrawer.style.display='block';
+
     if(dev.hardwareSchema){
-      var sBadge=document.getElementById('schemaBadge');
       var sName=dev.hardwareSchema.toUpperCase();
       sBadge.textContent=sName.replace('_',' ');
       sBadge.className=(sName.indexOf('PZEM')>=0)?'badge badge-pzem':'badge badge-legacy';
@@ -705,21 +735,40 @@ function pollTelemetry(){
     if(dev.dryRunAlarm) alarmEl.className='alarm-banner visible';
     else alarmEl.className='alarm-banner';
 
-    var pzemCard=document.getElementById('pzemCard');
-    if(!dev.hasPzem) pzemCard.style.opacity='0.45';
-    else pzemCard.style.opacity='1';
+    // PZEM AC Electrical Readouts: Only show if hardware actually has PZEM
+    if(!dev.hasPzem){
+      pzemCard.style.display='none';
+    }else{
+      pzemCard.style.display='block';
+      pzemCard.style.opacity='1';
 
-    document.getElementById('valVoltage').innerHTML=(dev.voltage||0).toFixed(1)+' <span>V</span>';
-    document.getElementById('valFreq').textContent=(dev.frequency||50.0).toFixed(1)+' Hz';
-    document.getElementById('valCurrent').innerHTML=(dev.current||0).toFixed(3)+' <span>A</span>';
-    var pwr=dev.power||0;
-    document.getElementById('valPower').innerHTML=pwr.toFixed(1)+' <span>W</span>';
-    document.getElementById('valPf').textContent='PF: '+(dev.powerFactor||0).toFixed(2);
-    document.getElementById('valEnergy').innerHTML=(dev.energy||0).toFixed(3)+' <span>kWh</span>';
+      var pwr=dev.power||0;
+      document.getElementById('valVoltage').innerHTML=(dev.voltage||0).toFixed(1)+' <span>V</span>';
+      document.getElementById('valFreq').textContent=(dev.frequency||50.0).toFixed(1)+' Hz';
+      document.getElementById('valCurrent').innerHTML=(dev.current||0).toFixed(3)+' <span>A</span>';
+      document.getElementById('valPower').innerHTML=pwr.toFixed(1)+' <span>W</span>';
+      document.getElementById('valPf').textContent='PF: '+(dev.powerFactor||0).toFixed(2);
+      document.getElementById('valEnergy').innerHTML=(dev.energy||0).toFixed(3)+' <span>kWh</span>';
 
-    var pct=Math.min(100,Math.round((pwr/1300)*100));
-    document.getElementById('wattBarFill').style.width=pct+'%';
-    document.getElementById('wattPctText').textContent=pct+'% ('+pwr.toFixed(0)+'W / 1300W)';
+      var pct=Math.min(100,Math.round((pwr/1300)*100));
+      document.getElementById('wattBarFill').style.width=pct+'%';
+      document.getElementById('wattPctText').textContent=pct+'% ('+pwr.toFixed(0)+'W / 1300W)';
+
+      var acAlert=document.getElementById('acAlertBadge');
+      if(dev.acPowerAlert){
+        acAlert.textContent='⚠️ MAINS LOST';
+        acAlert.style.background='rgba(244,63,94,0.2)';
+        acAlert.style.color='#f43f5e';
+      }else if(dev.pzemOnline){
+        acAlert.textContent='AC 220V OK';
+        acAlert.style.background='rgba(16,185,129,0.15)';
+        acAlert.style.color='#34d399';
+      }else{
+        acAlert.textContent='PZEM OFFLINE';
+        acAlert.style.background='rgba(244,63,94,0.2)';
+        acAlert.style.color='#f43f5e';
+      }
+    }
 
     var unreach = document.getElementById('pumpUnreachableBanner');
     if(unreach) unreach.style.display='none';
@@ -730,17 +779,6 @@ function pollTelemetry(){
         localStorage.setItem('craftthingy_esp_last_sta_ip', detected);
         updatePumpHostChips(detected);
       }
-    }
-
-    var acAlert=document.getElementById('acAlertBadge');
-    if(dev.acPowerAlert){
-      acAlert.textContent='⚠️ MAINS LOST';
-      acAlert.style.background='rgba(244,63,94,0.2)';
-      acAlert.style.color='#f43f5e';
-    }else{
-      acAlert.textContent='AC 220V OK';
-      acAlert.style.background='rgba(16,185,129,0.15)';
-      acAlert.style.color='#34d399';
     }
   }).catch(function(){
     var pill=document.getElementById('livePill');
