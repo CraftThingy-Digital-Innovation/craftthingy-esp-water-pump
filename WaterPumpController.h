@@ -149,7 +149,7 @@ public:
     }
 
     const char* getAppVersion() const override {
-        return "1.1.0";
+        return "1.1.1";
     }
 
     const char* getSchemaName() const {
