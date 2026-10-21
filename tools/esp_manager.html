@@ -580,7 +580,8 @@
       }
       document.getElementById('valChip').textContent = sys.chip ? `${sys.chip} (${sys.boardTarget || ''})` : (data.chip || "Unknown");
       document.getElementById('valFlash').textContent = sys.flashBytes ? `${(sys.flashBytes / 1024 / 1024).toFixed(1)} MB` : (data.flashBytes ? `${(data.flashBytes / 1024 / 1024).toFixed(1)} MB` : "1.0 MB");
-      document.getElementById('valCoreVer').textContent = sys.coreVersion || data.coreVersion || "1.0.0";
+      const verText = sys.appVersion ? `${sys.appVersion} (Core ${sys.coreVersion || '1.1.5'})` : (sys.coreVersion || data.coreVersion || "1.1.5");
+      document.getElementById('valCoreVer').textContent = verText;
       document.getElementById('valRole').textContent = ota.activeRole || data.activeRole || "water_pump";
       document.getElementById('valWifi').textContent = net.state || data.wifiState || "ap_mode";
       document.getElementById('valApSsid').textContent = net.apSsid ? `${net.apSsid} ${net.apSecured ? '[🔒 WPA2]' : '[Open]'}` : (net.state === 'ap_mode' ? 'Broadcasting' : '--');
