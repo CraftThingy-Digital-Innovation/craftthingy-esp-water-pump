@@ -507,7 +507,7 @@ input:focus{border-color:var(--cyan)}
   </div>
 
   <!-- PZEM-004T AC Electrical Telemetry Card -->
-  <div id="pzemCard" class="card">
+  <div id="pzemCard" class="card" style="display:none;">
     <div class="telemetry-hd">
       <h2>
         <svg style="width:18px;height:18px;fill:#a855f7" viewBox="0 0 24 24"><path d="M11 15h2v2h-2zm0-8h2v6h-2zm1-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
@@ -589,7 +589,10 @@ var targetHost=localStorage.getItem('craft_pump_host')||'192.168.4.1';
 
 function getAuthHeaders(){
   var h={'Content-Type':'application/json'};
-  if(activeKey) h['X-Master-Key']=activeKey;
+  if(activeKey){
+    h['Authorization']='Bearer '+activeKey;
+    h['X-Master-Key']=activeKey;
+  }
   return h;
 }
 function toggleDrawer(id){document.getElementById(id).classList.toggle('open');}
@@ -641,34 +644,51 @@ function formatSec(s){
 }
 
 function sendCmd(cmd){
-  fetch('http://'+targetHost+'/api/v1/device/command',{
+  var url='http://'+targetHost+'/api/v1/device/command?cmd='+encodeURIComponent(cmd);
+  fetch(url,{
     method:'POST',
     headers:getAuthHeaders(),
-    body:JSON.stringify({command:cmd})
+    body:JSON.stringify({cmd:cmd,command:cmd})
   }).then(function(r){return r.json();})
   .then(function(d){
-    if(d.status==='success') showAlert(d.data.message||'Command executed',false);
+    if(d.status==='success') showAlert(d.data&&d.data.message?d.data.message:'Command executed',false);
     else showAlert(d.error?d.error.message:'Command failed',true);
     pollTelemetry();
   }).catch(function(){showAlert('Error communicating with device',true);});
 }
 
 function pollTelemetry(){
-  fetch('http://'+targetHost+'/api/v1/device/status')
-  .then(function(r){return r.json();})
+  fetch('http://'+targetHost+'/api/v1/system/status')
+  .then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  })
   .then(function(d){
-    var dev=(d.data&&d.data.role)?d.data:(d.data&&d.data.device?d.data.device:d);
     var pill=document.getElementById('livePill');
     var liveText=document.getElementById('liveText');
     pill.className='live-pill';
     liveText.textContent='CONNECTED';
 
-    var isBaseCore = (d.status==='error'||(!d.hardwareSchema&&!(d.data&&d.data.hardwareSchema)));
+    var data = d.data || d;
+    var dev = data.device || (data.role ? data : {});
+    var ota = data.ota || {};
+    var net = data.network || {};
+
+    // Auto-detect and record device IP for quick selection
+    var detectedIp = net.ip || net.staIp || net.staticIp;
+    if(detectedIp && detectedIp !== '192.168.4.1' && detectedIp !== '0.0.0.0'){
+      localStorage.setItem('craftthingy_esp_last_sta_ip', detectedIp);
+      updatePumpHostChips(detectedIp);
+    }
+
     var coreBanner = document.getElementById('baseCoreBanner');
     var heroCard = document.getElementById('heroTankCard');
     var pzemCard = document.getElementById('pzemCard');
     var hwDrawer = document.getElementById('hwDrawer');
     var sBadge = document.getElementById('schemaBadge');
+
+    // Genuine Base Core check
+    var isBaseCore = (ota.activeRole === 'core' || dev.role === 'core' || dev.role === 'none' || (!dev.role && !ota.activeRole));
 
     if(isBaseCore){
       sBadge.textContent='BASE CORE MODE (No Pump App)';
@@ -692,9 +712,15 @@ function pollTelemetry(){
       var sName=dev.hardwareSchema.toUpperCase();
       sBadge.textContent=sName.replace('_',' ');
       sBadge.className=(sName.indexOf('PZEM')>=0)?'badge badge-pzem':'badge badge-legacy';
+    } else {
+      sBadge.textContent='LEGACY (v1.0 Standard Wiring)';
+      sBadge.className='badge badge-legacy';
     }
+
     if(dev.riseTimeUs!==undefined){
       document.getElementById('riseTimeVal').textContent=dev.riseTimeUs+' us';
+    } else {
+      document.getElementById('riseTimeVal').textContent='N/A (v1.0)';
     }
 
     var demandsFill=dev.tankDemandsFill;
