@@ -79,10 +79,29 @@ jobs:
           fi
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
 
+          # Extract commit logs since previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || git tag -l --sort=-v:refname | sed -n '2p')
+          if [ -n "$PREV_TAG" ]; then
+            PUMP_COMMITS=$(git log "${PREV_TAG}..HEAD" --pretty=format:"* %s (\`%h\` by @%an)")
+          else
+            PUMP_COMMITS=$(git log -n 10 --pretty=format:"* %s (\`%h\` by @%an)")
+          fi
+
+          CORE_COMMITS=$(cd .core_ota_repo && git log -n 5 --pretty=format:"* %s (\`%h\` by @%an)")
+
           cat << EOF > release_notes.md
           ## 💧 CraftThingy Water Pump Controller - ${TAG}
 
           Official production release of the automated Water Pump Controller module for the **CraftThingy Digital Innovation** ecosystem.
+
+          ### 🚀 What's Changed in this Release
+          #### 💧 Controller Application Updates:
+          ${PUMP_COMMITS}
+
+          #### ⚙️ Core OTA Framework Updates:
+          ${CORE_COMMITS}
+
+          ---
 
           ### 📦 Pre-Compiled Firmware Binaries
           Download the appropriate binary matching your hardware target:
