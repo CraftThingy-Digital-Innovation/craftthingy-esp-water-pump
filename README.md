@@ -33,21 +33,29 @@ Automated water pump controller firmware engineered for **ESP-01 / ESP-01S (1MB 
 
 ## 🔌 Hardware Wiring & Pinouts
 
-### 1. ESP8266 (ESP-01 / ESP-01S)
+### 1. ESP8266 (ESP-01 / ESP-01S) — Dynamic Auto-Detecting Schemas
 
-| ESP-01 Pin | Connected Device | Notes |
-|---|---|---|
-| **GPIO 0** | Relay Signal (`IN`) | Active LOW (standard ESP-01 relay shield) |
-| **GPIO 2** | Float Switch / Level Sensor | Connect one wire to GPIO 2, other to GND. Internal pull-up enabled. |
-| **3V3** | Power (+3.3V) | Must provide at least 300mA peak |
-| **GND** | Ground | Common system ground |
-| **EN / CH_PD** | Pull-up to 3.3V | Enable pin (already pulled high on ESP-01S) |
+The firmware automatically senses the physical wiring on boot using capacitive pin fingerprinting:
+
+#### A. Standard / Legacy Schema (`legacy_g3`)
+*Detected when GPIO 2 is an empty, unpopulated pin.*
+* **GPIO 0**: Relay Signal (`IN`)
+* **GPIO 3 (RX)**: Float Switch / Level Sensor (Direct to GND)
+* **PZEM**: Disabled (Hardware Serial preserved for USB)
+
+#### B. Power Monitoring Schema (`pzem_1uf` or `pzem_10uf`)
+*Detected when an RC boot-delay circuit is installed on GPIO 2.*
+* **GPIO 0**: Relay Signal (`IN`)
+* **GPIO 2**: Float Switch with Boot-Delay Circuit (Supports **1µF** or **10µF** capacitor)
+* **GPIO 1 (TX)**: PZEM-004T RX
+* **GPIO 3 (RX)**: PZEM-004T TX
+* **Telemetry**: Voltage, Current, Power, Energy, Frequency, Power Factor, and AC Power-Loss Alarm.
 
 ```text
                +-------------------+
                |    ESP-01 / 01S   |
-               |  GND   TX    GPIO2| ----> [Float Switch] ---> GND
-               |  GPIO0 EN    RX   | ----> [Relay Module IN]
+               |  GND   TX    GPIO2| ----> [Boot Circuit + Float Switch]
+               |  GPIO0 EN    RX   | <---> [PZEM-004T (TX/RX)] / Relay IN
                |  VCC              | ----> +3.3V Power
                +-------------------+
 ```
