@@ -70,8 +70,13 @@ public:
             Serial.begin(9600); // Reconfigure hardware UART to 9600 baud for PZEM Modbus
             _pzem.begin(&Serial, 0x01);
 #elif defined(ESP32)
+    #if (defined(SOC_UART_NUM) && SOC_UART_NUM < 3) || defined(CONFIG_IDF_TARGET_ESP32C3) || defined(ARDUINO_ESP32_C3_DEVKITM_1)
+            Serial1.begin(9600, SERIAL_8N1, 4, 5);
+            _pzem.begin(&Serial1, 0x01);
+    #else
             Serial2.begin(9600, SERIAL_8N1, 16, 17);
             _pzem.begin(&Serial2, 0x01);
+    #endif
 #endif
             // Initial probe to verify if live AC power is present
             delay(100);
@@ -149,7 +154,7 @@ public:
     }
 
     const char* getAppVersion() const override {
-        return "1.1.1";
+        return "1.1.2";
     }
 
     const char* getSchemaName() const {
