@@ -36,8 +36,8 @@ import urllib.parse
 from datetime import datetime, timezone, timedelta
 from typing import Tuple, Optional, Dict, Any
 
-TOOL_VERSION = "1.1.6"
-CORE_VERSION = "1.1.1"
+TOOL_VERSION = "1.1.7"
+CORE_VERSION = "1.1.2"
 
 if hasattr(sys.stdout, "reconfigure"):
     try:
@@ -598,7 +598,7 @@ Examples:
     parser.add_argument("--esp", default="192.168.2.228", help="ESP IP address (default: 192.168.2.228, or 192.168.4.1 for AP mode)")
     parser.add_argument("--key", default=DEFAULT_SECRET, help="Master Secret Key")
     parser.add_argument("--bin", default=None, help="Path to firmware binary (default: auto-detected from build artifacts or latest release)")
-    parser.add_argument("--tag", default="v1.1.6", help="Release tag to simulate or download (default: v1.1.6)")
+    parser.add_argument("--tag", default="v1.1.7", help="Release tag to simulate or download (default: v1.1.7)")
     parser.add_argument("--target", default="water_pump", choices=["water_pump", "core"], help="Firmware target role (default: water_pump)")
     parser.add_argument("--bridge-ip", default=None, help="Host IP for rescue bridge (default: auto-detected)")
     parser.add_argument("--gateway", default="192.168.2.1", help="Network Gateway (default: 192.168.2.1)")
