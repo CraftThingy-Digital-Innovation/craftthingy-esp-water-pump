@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CraftThingy Digital Innovation - Over-The-Air Rescue Bridge (v1.1.5 / Core v1.1.0)
+CraftThingy Digital Innovation - Over-The-Air Rescue Bridge (v1.1.6 / Core v1.1.1)
 =============================================================================
 Bypasses the ESP8266 legacy BearSSL 4KB input buffer limit (BR_ERR_TOO_LARGE)
 and AWS S3 TLS connection drops by acting as an all-in-one local chunked OTA
@@ -36,8 +36,8 @@ import urllib.parse
 from datetime import datetime, timezone, timedelta
 from typing import Tuple, Optional, Dict, Any
 
-TOOL_VERSION = "1.1.5"
-CORE_VERSION = "1.1.0"
+TOOL_VERSION = "1.1.6"
+CORE_VERSION = "1.1.1"
 
 if hasattr(sys.stdout, "reconfigure"):
     try:
@@ -66,7 +66,7 @@ CERT_FILE = os.path.join(SCRIPT_DIR, "rescue_cert.pem")
 KEY_FILE = os.path.join(SCRIPT_DIR, "rescue_key.pem")
 
 
-def find_firmware_binary(custom_bin: Optional[str] = None, tag: str = "v1.1.5", target: str = "water_pump") -> str:
+def find_firmware_binary(custom_bin: Optional[str] = None, tag: str = "v1.1.6", target: str = "water_pump") -> str:
     """Locates or downloads the rescue firmware binary."""
     if custom_bin and os.path.exists(custom_bin):
         return os.path.abspath(custom_bin)
@@ -304,7 +304,7 @@ def dns_server_thread(local_ip: str, upstream_dns: str, stop_event: threading.Ev
     sock.close()
 
 
-def https_server_thread(bin_path: str, local_ip: str, stop_event: threading.Event, transfer_complete_event: threading.Event, tag: str = "v1.1.5"):
+def https_server_thread(bin_path: str, local_ip: str, stop_event: threading.Event, transfer_complete_event: threading.Event, tag: str = "v1.1.6"):
     """Paced TLS server serving 1024-byte chunked records acceptable by BearSSL 4KB buffer."""
     bin_size = os.path.getsize(bin_path)
     print(f"[+] Loaded firmware binary: {bin_path} ({bin_size} bytes)")
@@ -449,7 +449,7 @@ def run_rescue_flow(
     gateway: str,
     wifi_ssid: Optional[str] = None,
     wifi_pass: Optional[str] = None,
-    tag: str = "v1.1.5"
+    tag: str = "v1.1.6"
 ):
     """Executes the complete end-to-end OTA rescue flow."""
     stop_event = threading.Event()
@@ -591,14 +591,14 @@ Examples:
   python tools/ota_rescue_bridge.py --esp 192.168.4.1 --wifi-ssid "RescueHotspot" --wifi-pass "12345678"
 
   # Specifying target role and tag:
-  python tools/ota_rescue_bridge.py --esp 192.168.2.228 --target water_pump --tag v1.1.5
+  python tools/ota_rescue_bridge.py --esp 192.168.2.228 --target water_pump --tag v1.1.6
         """
     )
     parser.add_argument("--version", action="version", version=f"CraftThingy Rescue Bridge v{TOOL_VERSION} (Core v{CORE_VERSION})")
     parser.add_argument("--esp", default="192.168.2.228", help="ESP IP address (default: 192.168.2.228, or 192.168.4.1 for AP mode)")
     parser.add_argument("--key", default=DEFAULT_SECRET, help="Master Secret Key")
     parser.add_argument("--bin", default=None, help="Path to firmware binary (default: auto-detected from build artifacts or latest release)")
-    parser.add_argument("--tag", default="v1.1.5", help="Release tag to simulate or download (default: v1.1.5)")
+    parser.add_argument("--tag", default="v1.1.6", help="Release tag to simulate or download (default: v1.1.6)")
     parser.add_argument("--target", default="water_pump", choices=["water_pump", "core"], help="Firmware target role (default: water_pump)")
     parser.add_argument("--bridge-ip", default=None, help="Host IP for rescue bridge (default: auto-detected)")
     parser.add_argument("--gateway", default="192.168.2.1", help="Network Gateway (default: 192.168.2.1)")

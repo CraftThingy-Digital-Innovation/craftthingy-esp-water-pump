@@ -20,9 +20,9 @@ If your ESP is connected to your local network (e.g. `192.168.2.228`):
    ```
 3. The tool will:
    - Generate temporary local TLS certificates matching GitHub hostnames.
-   - Serve simulated GitHub release metadata for the target release (e.g. `v1.1.5`).
+   - Serve simulated GitHub release metadata for the target release (e.g. `v1.1.6`).
    - Stream the firmware binary in 1,024-byte paced TLS records.
-   - Monitor the ESP's flash write and verify reboot into `v1.1.5` / `v1.1.0`.
+   - Monitor the ESP's flash write and verify reboot into `v1.1.6`.
 
 ---
 
