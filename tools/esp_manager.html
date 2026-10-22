@@ -256,7 +256,9 @@
 
   <!-- WiFi Configuration Card -->
   <div class="card">
-    <h2>3. WiFi Provisioning</h2>
+    <h2>3. WiFi Provisioning & Network Addressing</h2>
+
+    <h3 style="font-size:0.95rem; color:var(--accent); margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:6px;">📡 Wi-Fi Station Credentials (Layer 2)</h3>
     <div class="form-group">
       <label>Nearby SSIDs</label>
       <div style="display:flex; gap:8px;">
@@ -272,14 +274,18 @@
     </div>
     <div class="form-group">
       <label>WiFi Password</label>
-      <input type="password" id="wifiPass" placeholder="Network Password">
+      <input type="password" id="wifiPass" placeholder="Network Password (leave blank to keep current)">
+    </div>
+    <div class="btn-group" style="margin-bottom:20px;">
+      <button onclick="saveWiFi()">Save & Connect WiFi</button>
     </div>
 
-    <!-- Static IP vs DHCP Toggle -->
-    <div class="form-group" style="margin-top:14px; padding-top:12px; border-top:1px dashed var(--border);">
+    <!-- Decoupled Static IP vs DHCP Section -->
+    <h3 style="font-size:0.95rem; color:#38bdf8; margin-top:20px; margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:6px;">🌐 IP Addressing & DNS Configuration (Layer 3)</h3>
+    <div class="form-group">
       <label style="cursor:pointer; display:flex; align-items:center; gap:8px;">
         <input type="checkbox" id="useStaticIp" style="width:auto; margin:0;" onchange="toggleStaticIpFields()">
-        <span style="font-size:0.9rem; color:var(--accent);">Configure Manual Static IP (Default is DHCP Dynamic IP)</span>
+        <span style="font-size:0.9rem; color:var(--text);">Enable Manual Static IP (Default is DHCP Dynamic IP)</span>
       </label>
     </div>
 
@@ -311,7 +317,7 @@
     </div>
 
     <div class="btn-group">
-      <button onclick="saveWiFi()">Save & Connect WiFi</button>
+      <button class="secondary" style="background:#0284c7; color:#fff;" onclick="saveIpConfig()">💾 Save IP & DNS Configuration</button>
     </div>
   </div>
 
@@ -1213,6 +1219,22 @@
       const pass = document.getElementById('wifiPass').value;
       if (!ssid) { alert("Please enter SSID"); return; }
 
+      log(`Sending WiFi credentials for "${ssid}"...`);
+      const payload = { ssid, pass };
+      const q = new URLSearchParams({ ssid, pass });
+      await apiRequest('POST', `/api/v1/wifi/config?${q.toString()}`, payload);
+      log(`[Success] Credentials saved! ESP is connecting to "${ssid}" in background...`);
+      showToast('success', 'Wi-Fi Credentials Sent', `Connecting to ${ssid}...`);
+      log(`[Auto-Detect] Polling ESP for newly assigned network IP...`);
+      startLanIpDiscovery(ssid);
+    } catch (e) {
+      log(`Error saving WiFi: ${e.message}`);
+      alert(`❌ Failed to save WiFi: ${e.message}`);
+    }
+  }
+
+  async function saveIpConfig() {
+    try {
       const useStatic = document.getElementById('useStaticIp').checked;
       const staticIp = document.getElementById('staticIp').value.trim();
       const gateway = document.getElementById('gatewayIp').value.trim();
@@ -1222,36 +1244,31 @@
 
       if (useStatic) {
         if (!staticIp) {
-          alert("Please enter the Static IP Address or uncheck 'Configure Manual Static IP' to use DHCP.");
+          alert("Please enter the Static IP Address or uncheck 'Enable Manual Static IP' to use DHCP.");
           return;
         }
         if (!gateway || gateway === '0.0.0.0') {
-          alert("Default Gateway cannot be 0.0.0.0 for Static IP. Enter your router's IP (e.g. 192.168.2.1) so the ESP can access the internet to download OTA updates.");
+          alert("Default Gateway cannot be 0.0.0.0 for Static IP. Enter your router's IP (e.g. 192.168.2.1).");
           return;
         }
       }
 
-      log(`Sending WiFi credentials for "${ssid}" (${useStatic ? 'Static IP: ' + staticIp : 'DHCP Dynamic IP'})...`);
-      const payload = { ssid, pass, useStatic, staticIp, gateway, subnet, dns1, dns2 };
-      const q = new URLSearchParams({
-        ssid,
-        pass,
-        useStatic: useStatic ? 'true' : 'false',
-        use_static: useStatic ? 'true' : 'false',
-        staticIp,
-        static_ip: staticIp,
-        gateway,
-        subnet,
-        dns1,
-        dns2
-      });
-      await apiRequest('POST', `/api/v1/wifi/config?${q.toString()}`, payload);
-      log(`[Success] Credentials saved! ESP is connecting to "${ssid}" in background...`);
-      log(`[Auto-Detect] Polling ESP for newly assigned network IP...`);
-      startLanIpDiscovery(ssid);
+      log(`Updating IP addressing configuration (${useStatic ? 'Static IP: ' + staticIp : 'DHCP Dynamic IP'})...`);
+      const payload = { useStatic, staticIp, gateway, subnet, dns1, dns2 };
+      await apiRequest('POST', '/api/v1/network/ip', payload);
+      log(`[Success] IP configuration saved! Reapplying network settings on ESP...`);
+      showToast('success', 'IP Settings Saved', useStatic ? `Static IP set to ${staticIp}. Reconnecting...` : 'DHCP enabled. Reconnecting...');
+      
+      if (useStatic && staticIp && staticIp !== document.getElementById('espHost').value.trim()) {
+        setTimeout(() => {
+          setHost(staticIp);
+        }, 3000);
+      } else {
+        setTimeout(fetchStatus, 3000);
+      }
     } catch (e) {
-      log(`Error saving WiFi: ${e.message}`);
-      alert(`❌ Failed to save WiFi: ${e.message}`);
+      log(`Error saving IP configuration: ${e.message}`);
+      alert(`❌ Failed to save IP configuration: ${e.message}`);
     }
   }
 
