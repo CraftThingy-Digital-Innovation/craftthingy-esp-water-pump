@@ -36,8 +36,8 @@ import urllib.parse
 from datetime import datetime, timezone, timedelta
 from typing import Tuple, Optional, Dict, Any
 
-TOOL_VERSION = "1.1.8"
-CORE_VERSION = "1.1.3"
+TOOL_VERSION = "1.1.9"
+CORE_VERSION = "1.1.4"
 
 if hasattr(sys.stdout, "reconfigure"):
     try:

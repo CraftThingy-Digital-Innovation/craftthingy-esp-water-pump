@@ -1,4 +1,4 @@
-# CraftThingy Over-The-Air (OTA) Rescue & Offline Upgrade Guide (Core v1.1.3 / App v1.1.8)
+# CraftThingy Over-The-Air (OTA) Rescue & Offline Upgrade Guide (Core v1.1.4 / App v1.1.9)
 
 ## Why is a Rescue Tool Needed?
 1. **Legacy ESP8266 v1.0.0 Firmware Buffer Limitations**:
@@ -18,17 +18,17 @@ If your ESP is connected to your local network (e.g. `192.168.2.228`):
 1. Open PowerShell or Terminal with Administrator privileges (needed to bind port 53/443).
 2. Run the rescue bridge pointing to the ESP:
    ```powershell
-   # In craftthingy-esp-core-ota (recovers Core v1.1.3 by default):
+   # In craftthingy-esp-core-ota (recovers Core v1.1.4 by default):
    python tools/ota_rescue_bridge.py --esp 192.168.2.228
 
-   # In craftthingy-esp-water-pump (recovers Water Pump v1.1.8 by default):
+   # In craftthingy-esp-water-pump (recovers Water Pump v1.1.9 by default):
    python tools/ota_rescue_bridge.py --esp 192.168.2.228 --target water_pump
    ```
 3. The tool will:
    - Query live ESP telemetry and installed firmware versions.
    - Point the ESP's DNS to the host PC via `/api/v1/network/ip`.
    - Generate temporary local TLS certificates matching GitHub hostnames.
-   - Serve simulated GitHub release metadata (`v1.1.3` for core, `v1.1.8` for water_pump).
+   - Serve simulated GitHub release metadata (`v1.1.4` for core, `v1.1.9` for water_pump).
    - Stream the firmware binary in 1,024-byte paced TLS records.
    - Monitor the ESP's flash write and verify reboot into the target firmware.
 
