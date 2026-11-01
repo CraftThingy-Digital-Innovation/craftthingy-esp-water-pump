@@ -18,7 +18,11 @@ public:
     WaterPumpController(uint8_t relayPin = 0, uint8_t levelSensorPin = 2, bool activeLowRelay = true, bool switchClosedWhenEmpty = true)
         : _relayPin(relayPin), _levelSensorPin(levelSensorPin), _activeLow(activeLowRelay),
           _switchClosedWhenEmpty(switchClosedWhenEmpty), _pumpRunning(false), _autoMode(true),
-          _interrupted(false), _dryRunTripped(false), _pumpStartMs(0), _maxRunTimeMs(900000), // 15 min max run safety
+          _interrupted(false), _dryRunTripped(false), _dryRunReason("none"),
+          _pumpStartMs(0), _maxRunTimeMs(900000), // 15 min max run safety
+          _leaseExpiresMs(0),
+          _cooldownActive(false), _cooldownStartMs(0), _cooldownDurationMs(900000),
+          _retryAttempt(0), _inPrimeProbe(false), _primeProbeStartMs(0),
           _lastRawState(HIGH), _debouncedState(HIGH), _lastStateChangeMs(0), _debounceDelayMs(2000), // 2s debounce for water ripples
           _schema(SCHEMA_UNKNOWN), _riseTimeUs(0), _hasPzem(false), _pzemOnline(false),
           _acPowerAlert(false), _lastPzemPollMs(0), _pzemPollIntervalMs(1000), _pzemConsecutiveFailures(0) {
@@ -128,21 +132,94 @@ public:
         }
 
         // -------------------------------------------------------------
-        // 3. Dry-Run Safety Timer Protection
+        // 2. Tank Level Self-Clearing Hysteresis
         // -------------------------------------------------------------
-        if (_pumpRunning) {
-            if (millis() - _pumpStartMs >= _maxRunTimeMs) {
+        // If tank float sensor signals FULL (tank no longer demands fill),
+        // instantly stop pump and clear any latching alarms / cooldowns.
+        if (!tankDemandsFill) {
+            if (_pumpRunning) {
                 setRelay(false);
-                _dryRunTripped = true;
+                _inPrimeProbe = false;
+            }
+            if (_dryRunTripped || _cooldownActive) {
+                _dryRunTripped = false;
+                _cooldownActive = false;
+                _retryAttempt = 0;
+                _dryRunReason = "none";
             }
         }
 
         // -------------------------------------------------------------
-        // 4. Automatic Water Filling Logic with Mechanical Hysteresis
+        // 3. Periodic PZEM-004T Power Polling (Non-blocking)
         // -------------------------------------------------------------
-        if (_autoMode && !_dryRunTripped && !_interrupted) {
+        if (_hasPzem && (millis() - _lastPzemPollMs >= _pzemPollIntervalMs)) {
+            _lastPzemPollMs = millis();
+
+            if (_pzem.read(_pzemData, 200)) {
+                _pzemOnline = true;
+                _acPowerAlert = false;
+                _pzemConsecutiveFailures = 0;
+
+                // Local PZEM Cavitation / Dry Run Detection:
+                // After 5s inrush settle, if power is <120W and >5W, pump is running dry in air!
+                if (_pumpRunning && !_inPrimeProbe && (millis() - _pumpStartMs > 5000)) {
+                    if (_pzemData.power > 5.0f && _pzemData.power < 120.0f) {
+                        tripDryRun("local_pzem_cavitation");
+                    }
+                }
+            } else {
+                _pzemConsecutiveFailures++;
+                if (_pzemConsecutiveFailures >= 3) {
+                    _pzemOnline = false;
+                    _acPowerAlert = true; // AC line lost, breaker tripped, or wire loose
+                }
+            }
+        }
+
+        // -------------------------------------------------------------
+        // 4. Autonomous Prime Probe Timeout (12s test limit)
+        // -------------------------------------------------------------
+        if (_inPrimeProbe) {
+            if (millis() - _primeProbeStartMs >= 12000) {
+                // Prime probe ran 12s without confirmation from Central Control or PZEM
+                tripDryRun("probe_unconfirmed");
+            }
+        }
+
+        // -------------------------------------------------------------
+        // 5. Active Pump Runtime & Dynamic Safety Lease Watchdog
+        // -------------------------------------------------------------
+        if (_pumpRunning && !_inPrimeProbe) {
+            uint32_t currentLimit = (_leaseExpiresMs > 0) ? _leaseExpiresMs : (_pumpStartMs + _maxRunTimeMs);
+            if (millis() >= currentLimit) {
+                // Safety lease expired without renewal
+                tripDryRun("lease_timeout");
+            }
+        }
+
+        // -------------------------------------------------------------
+        // 6. Autonomous Self-Healing Cooldown & Auto-Recovery
+        // -------------------------------------------------------------
+        if (_cooldownActive && !_pumpRunning) {
+            uint32_t elapsed = millis() - _cooldownStartMs;
+            if (elapsed >= _cooldownDurationMs) {
+                // Cooldown elapsed! Attempt prime probe if tank still empty & autoMode
+                if (tankDemandsFill && _autoMode && _retryAttempt < 3) {
+                    startPrimeProbe();
+                } else if (_retryAttempt >= 3) {
+                    // Maximum auto-retries reached, stop auto-probing to protect hardware
+                    _cooldownActive = false;
+                }
+            }
+        }
+
+        // -------------------------------------------------------------
+        // 7. Automatic Water Filling Logic with Mechanical Hysteresis
+        // -------------------------------------------------------------
+        if (_autoMode && !_dryRunTripped && !_cooldownActive && !_interrupted) {
             if (tankDemandsFill && !_pumpRunning) {
                 setRelay(true);
+                _leaseExpiresMs = millis() + _maxRunTimeMs; // initial 15 min lease
             } else if (!tankDemandsFill && _pumpRunning) {
                 setRelay(false);
             }
@@ -154,7 +231,11 @@ public:
     }
 
     const char* getAppVersion() const override {
-        return "1.1.5";
+#ifdef APP_VERSION
+        return APP_VERSION;
+#else
+        return "1.2.0";
+#endif
     }
 
     const char* getSchemaName() const {
@@ -171,6 +252,8 @@ public:
         if (cmd == "stop" || cmd == "interrupt" || cmd == "off") {
             _interrupted = true;
             _autoMode = false;
+            _inPrimeProbe = false;
+            _cooldownActive = false;
             setRelay(false);
             response = "Operation INTERRUPTED: Pump immediately stopped";
             return true;
@@ -178,18 +261,58 @@ public:
             _interrupted = false;
             _autoMode = false;
             _dryRunTripped = false;
+            _cooldownActive = false;
+            _inPrimeProbe = false;
+            _retryAttempt = 0;
+            _dryRunReason = "none";
             setRelay(true);
+            _leaseExpiresMs = millis() + _maxRunTimeMs;
             response = "Pump turned ON manually";
             return true;
         } else if (cmd == "auto" || cmd == "resume") {
             _interrupted = false;
             _autoMode = true;
             _dryRunTripped = false;
+            _cooldownActive = false;
+            _inPrimeProbe = false;
+            _retryAttempt = 0;
+            _dryRunReason = "none";
             response = "Operation RESUMED: Set to AUTO float-switch mode";
             return true;
         } else if (cmd == "reset_safety") {
             _dryRunTripped = false;
-            response = "Safety dry-run alarm reset";
+            _cooldownActive = false;
+            _inPrimeProbe = false;
+            _retryAttempt = 0;
+            _dryRunReason = "none";
+            setRelay(false);
+            response = "Safety dry-run alarm and cooldown reset to normal";
+            return true;
+        } else if (cmd == "extend_lease" || cmd == "lease_extend") {
+            uint32_t sec = payload.toInt();
+            if (sec < 30) sec = 120;
+            if (sec > 600) sec = 600;
+            _leaseExpiresMs = millis() + (sec * 1000);
+            
+            // If in prime probe, Central Control's lease extension confirms water is flowing!
+            if (_inPrimeProbe) {
+                _inPrimeProbe = false;
+                _dryRunTripped = false;
+                _cooldownActive = false;
+                _retryAttempt = 0;
+                _dryRunReason = "none";
+            }
+            response = "Lease extended by " + String(sec) + "s";
+            return true;
+        } else if (cmd == "trip_dry_run") {
+            tripDryRun(payload.length() > 0 ? payload : "central_control_cavitation");
+            response = "Dry-run tripped by Central Control. Cooldown started.";
+            return true;
+        } else if (cmd == "probe_prime") {
+            _dryRunTripped = false;
+            _cooldownActive = false;
+            startPrimeProbe();
+            response = "Manual prime probe started (12s test)";
             return true;
         } else if (cmd == "reprobe") {
             setup();
@@ -200,6 +323,19 @@ public:
     }
 
     String getStatusJson() override {
+        uint32_t cdRemaining = 0;
+        if (_cooldownActive) {
+            uint32_t elapsed = millis() - _cooldownStartMs;
+            if (elapsed < _cooldownDurationMs) {
+                cdRemaining = (_cooldownDurationMs - elapsed) / 1000;
+            }
+        }
+
+        uint32_t leaseRemaining = 0;
+        if (_pumpRunning && _leaseExpiresMs > millis()) {
+            leaseRemaining = (_leaseExpiresMs - millis()) / 1000;
+        }
+
         String json = "{";
         json += "\"role\":\"water_pump\",";
         json += "\"relayPin\":" + String(_relayPin) + ",";
@@ -211,6 +347,12 @@ public:
         json += "\"autoMode\":" + String(_autoMode ? "true" : "false") + ",";
         json += "\"tankDemandsFill\":" + String((_switchClosedWhenEmpty ? (_debouncedState == LOW) : (_debouncedState == HIGH)) ? "true" : "false") + ",";
         json += "\"dryRunAlarm\":" + String(_dryRunTripped ? "true" : "false") + ",";
+        json += "\"dryRunReason\":\"" + _dryRunReason + "\",";
+        json += "\"cooldownActive\":" + String(_cooldownActive ? "true" : "false") + ",";
+        json += "\"cooldownRemainingSec\":" + String(cdRemaining) + ",";
+        json += "\"retryAttempt\":" + String(_retryAttempt) + ",";
+        json += "\"inPrimeProbe\":" + String(_inPrimeProbe ? "true" : "false") + ",";
+        json += "\"leaseRemainingSec\":" + String(leaseRemaining) + ",";
         json += "\"runDurationSec\":" + String(_pumpRunning ? (millis() - _pumpStartMs) / 1000 : 0) + ",";
         json += "\"maxRunTimeSec\":" + String(_maxRunTimeMs / 1000) + ",";
 
@@ -256,8 +398,19 @@ private:
     bool _autoMode;
     bool _interrupted;
     bool _dryRunTripped;
+    String _dryRunReason;
     uint32_t _pumpStartMs;
     uint32_t _maxRunTimeMs;
+    uint32_t _leaseExpiresMs;
+
+    // Autonomous Self-Healing / Auto-Recovery Cooldown & Probe
+    bool _cooldownActive;
+    uint32_t _cooldownStartMs;
+    uint32_t _cooldownDurationMs;
+    uint8_t _retryAttempt;
+    bool _inPrimeProbe;
+    uint32_t _primeProbeStartMs;
+
     int _lastRawState;
     int _debouncedState;
     uint32_t _lastStateChangeMs;
@@ -279,6 +432,35 @@ private:
         _pumpRunning = on;
         if (on) _pumpStartMs = millis();
         digitalWrite(_relayPin, _activeLow ? (!on ? HIGH : LOW) : (on ? HIGH : LOW));
+    }
+
+    void tripDryRun(const String& reason) {
+        setRelay(false);
+        _inPrimeProbe = false;
+        _dryRunTripped = true;
+        _dryRunReason = reason;
+        _cooldownActive = true;
+        _cooldownStartMs = millis();
+        _retryAttempt++;
+        
+        // Exponential backoff cooldown:
+        // Attempt 1: 15 min (900,000 ms)
+        // Attempt 2: 30 min (1,800,000 ms)
+        // Attempt 3+: 60 min (3,600,000 ms)
+        if (_retryAttempt == 1) {
+            _cooldownDurationMs = 900000;
+        } else if (_retryAttempt == 2) {
+            _cooldownDurationMs = 1800000;
+        } else {
+            _cooldownDurationMs = 3600000;
+        }
+    }
+
+    void startPrimeProbe() {
+        _cooldownActive = false;
+        _inPrimeProbe = true;
+        _primeProbeStartMs = millis();
+        setRelay(true);
     }
 
     /**
