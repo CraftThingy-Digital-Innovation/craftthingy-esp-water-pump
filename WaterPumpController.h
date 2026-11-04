@@ -15,7 +15,7 @@ enum HardwareWiringSchema {
 
 class WaterPumpController : public IDeviceController {
 public:
-    WaterPumpController(uint8_t relayPin = 0, uint8_t levelSensorPin = 2, bool activeLowRelay = true, bool switchClosedWhenEmpty = true)
+    WaterPumpController(uint8_t relayPin = 0, uint8_t levelSensorPin = 2, bool activeLowRelay = true, bool switchClosedWhenEmpty = false)
         : _relayPin(relayPin), _levelSensorPin(levelSensorPin), _activeLow(activeLowRelay),
           _switchClosedWhenEmpty(switchClosedWhenEmpty), _pumpRunning(false), _autoMode(true),
           _interrupted(false), _dryRunTripped(false), _dryRunReason("none"),
@@ -135,9 +135,9 @@ public:
         // 2. Tank Level Self-Clearing Hysteresis
         // -------------------------------------------------------------
         // If tank float sensor signals FULL (tank no longer demands fill),
-        // instantly stop pump and clear any latching alarms / cooldowns.
+        // stop pump in AUTO mode and clear any latching alarms / cooldowns.
         if (!tankDemandsFill) {
-            if (_pumpRunning) {
+            if (_autoMode && _pumpRunning) {
                 setRelay(false);
                 _inPrimeProbe = false;
             }
@@ -314,6 +314,26 @@ public:
             startPrimeProbe();
             response = "Manual prime probe started (12s test)";
             return true;
+        } else if (cmd == "invert_sensor" || cmd == "toggle_polarity") {
+            _switchClosedWhenEmpty = !_switchClosedWhenEmpty;
+            response = "Sensor polarity inverted. Closed-when-empty: " + String(_switchClosedWhenEmpty ? "true" : "false");
+            return true;
+        } else if (cmd == "set_sensor_polarity") {
+            if (payload == "high_when_empty" || payload == "false" || payload == "open_when_empty") {
+                _switchClosedWhenEmpty = false;
+            } else {
+                _switchClosedWhenEmpty = true;
+            }
+            response = "Sensor polarity set. Closed-when-empty: " + String(_switchClosedWhenEmpty ? "true" : "false");
+            return true;
+        } else if (cmd == "set_sensor_pin") {
+            uint8_t pin = payload.toInt();
+            _levelSensorPin = pin;
+            pinMode(_levelSensorPin, INPUT_PULLUP);
+            String pinErr;
+            PinManager::setPin("sensor", pin, pinErr);
+            response = "Sensor pin set to GPIO " + String(pin);
+            return true;
         } else if (cmd == "reprobe") {
             setup();
             response = "Hardware re-probed. Detected: " + String(getSchemaName()) + " (Rise time: " + String(_riseTimeUs) + " us)";
@@ -345,7 +365,11 @@ public:
         json += "\"pumpRunning\":" + String(_pumpRunning ? "true" : "false") + ",";
         json += "\"interrupted\":" + String(_interrupted ? "true" : "false") + ",";
         json += "\"autoMode\":" + String(_autoMode ? "true" : "false") + ",";
-        json += "\"tankDemandsFill\":" + String((_switchClosedWhenEmpty ? (_debouncedState == LOW) : (_debouncedState == HIGH)) ? "true" : "false") + ",";
+        bool tankDemandsFill = _switchClosedWhenEmpty ? (_debouncedState == LOW) : (_debouncedState == HIGH);
+        json += "\"tankDemandsFill\":" + String(tankDemandsFill ? "true" : "false") + ",";
+        json += "\"rawSensor\":" + String(digitalRead(_levelSensorPin)) + ",";
+        json += "\"debouncedSensor\":" + String(_debouncedState) + ",";
+        json += "\"switchClosedWhenEmpty\":" + String(_switchClosedWhenEmpty ? "true" : "false") + ",";
         json += "\"dryRunAlarm\":" + String(_dryRunTripped ? "true" : "false") + ",";
         json += "\"dryRunReason\":\"" + _dryRunReason + "\",";
         json += "\"cooldownActive\":" + String(_cooldownActive ? "true" : "false") + ",";
@@ -485,25 +509,27 @@ private:
         // - Bare pin (Standard Legacy): ~0 to 30 µs (due to stray ~5pF board capacitance)
         // - 1µF Boot Circuit: ~150 to 7,000 µs
         // - 10µF Boot Circuit: >= 7,000 µs (typically 12,000 - 35,000 µs)
+        int8_t userSensor = PinManager::getPin("sensor");
         if (_riseTimeUs < 100) {
             _schema = SCHEMA_LEGACY_G3;
             _relayPin = 0;
-            _levelSensorPin = 3; // Float switch on GPIO 3 (RX)
+            _levelSensorPin = (userSensor >= 0) ? (uint8_t)userSensor : 2;
             _hasPzem = false;
 
-            // Close Serial so GPIO 3 is dedicated to float switch
-            Serial.flush();
-            Serial.end();
-            pinMode(3, INPUT_PULLUP);
+            if (_levelSensorPin == 3) {
+                Serial.flush();
+                Serial.end();
+            }
+            pinMode(_levelSensorPin, INPUT_PULLUP);
         } else if (_riseTimeUs < 7000) {
             _schema = SCHEMA_PZEM_1UF;
             _relayPin = 0;
-            _levelSensorPin = 2; // Float switch on GPIO 2
+            _levelSensorPin = (userSensor >= 0) ? (uint8_t)userSensor : 2;
             _hasPzem = true;
         } else {
             _schema = SCHEMA_PZEM_10UF;
             _relayPin = 0;
-            _levelSensorPin = 2; // Float switch on GPIO 2
+            _levelSensorPin = (userSensor >= 0) ? (uint8_t)userSensor : 2;
             _hasPzem = true;
         }
 #endif

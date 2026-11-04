@@ -10,9 +10,9 @@
 // - ESP32:
 //   GPIO 23 -> Relay, GPIO 22 -> Float Sensor
 #if defined(ESP8266)
-    static WaterPumpController pumpController(0, 2, true);
+    static WaterPumpController pumpController(0, 2, true, false);
 #else
-    static WaterPumpController pumpController(23, 22, true);
+    static WaterPumpController pumpController(23, 22, true, false);
 #endif
 
 void setup() {
