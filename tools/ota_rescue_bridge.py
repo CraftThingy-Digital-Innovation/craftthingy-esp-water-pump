@@ -325,6 +325,14 @@ def dns_server_thread(local_ip: str, gateway: str, stop_event: threading.Event):
     sock.close()
 
 
+def create_ssl_context():
+    """Create fresh isolated TLS context with low-overhead static RSA cipher for BearSSL."""
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.load_cert_chain(certfile=CERT_FILE, keyfile=KEY_FILE)
+    ctx.options |= ssl.OP_NO_SSLv2 | ssl.OP_NO_SSLv3 | ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1 | ssl.OP_NO_TICKET
+    ctx.set_ciphers("AES128-GCM-SHA256:AES128-SHA:@SECLEVEL=1")
+    return ctx
+
 def https_server_thread(
     bin_path: str,
     local_ip: str,
@@ -363,8 +371,15 @@ def https_server_thread(
 
         print(f"[HTTPS] Incoming TLS connection from {client_addr[0]}:{client_addr[1]}")
         try:
-            ssl_conn = context.wrap_socket(client_sock, server_side=True)
-            ssl_conn.settimeout(8.0)
+            client_sock.settimeout(60.0)
+            client_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            try:
+                client_sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 512)
+            except Exception:
+                pass
+            ctx = create_ssl_context()
+            ssl_conn = ctx.wrap_socket(client_sock, server_side=True)
+            ssl_conn.settimeout(60.0)
 
             request = b""
             while b"\r\n\r\n" not in request:
@@ -437,7 +452,7 @@ def https_server_thread(
                 ).encode("utf-8") + api_payload
                 ssl_conn.sendall(resp)
                 print(f"[HTTPS] Served simulated GitHub Releases API ({tag}, target: {target}, size: {bin_size} bytes)")
-                time.sleep(0.5)
+                time.sleep(1.0)
                 try:
                     ssl_conn.close()
                 except Exception:
@@ -449,22 +464,30 @@ def https_server_thread(
                     f"HTTP/1.1 200 OK\r\n"
                     f"Content-Type: application/octet-stream\r\n"
                     f"Content-Length: {bin_size}\r\n"
-                    f"Connection: keep-alive\r\n"
+                    f"Connection: close\r\n"
                     f"Server: CraftThingy-Rescue-Bridge\r\n"
                     f"\r\n"
                 ).encode("utf-8")
                 ssl_conn.sendall(response_header)
-                print(f"[HTTPS] Headers sent. Streaming {bin_size} bytes in small 1024-byte chunks with 5ms pacing...")
+                print(f"[HTTPS] Headers sent. Streaming {bin_size} bytes in atomic 256-byte stop-and-wait records...")
 
                 sent_total = 0
+                chunk_in_sector = 0
                 with open(bin_path, "rb") as f:
                     while True:
-                        data = f.read(1024)
+                        data = f.read(256)
                         if not data:
                             break
                         ssl_conn.sendall(data)
                         sent_total += len(data)
-                        time.sleep(0.005)
+                        chunk_in_sector += len(data)
+                        if sent_total % (16 * 1024) < len(data) or sent_total == bin_size:
+                            print(f"[HTTPS] Streamed {sent_total}/{bin_size} bytes ({sent_total * 100 // bin_size}%)...", flush=True)
+                        if chunk_in_sector >= 4096:
+                            chunk_in_sector = 0
+                            time.sleep(0.120)
+                        else:
+                            time.sleep(0.006)
 
                 print(f"[SUCCESS] All {sent_total} bytes streamed into ESP flash cleanly!")
                 transfer_complete_event.set()
@@ -595,6 +618,27 @@ def run_rescue_flow(
                         print(f"[-] Could not update DNS automatically: {ex2}")
                 time.sleep(2)
 
+        # Ensure ESP has fresh, maximum unfragmented heap for the TLS handshake
+        print("[*] Rebooting ESP to guarantee maximum unfragmented heap for OTA...", flush=True)
+        time.sleep(2.0)
+        try:
+            curr_seq = int(time.time()) + 10
+            send_signed_request(esp_host, "POST", "/api/v1/system/reboot", secret_key, sequence=curr_seq, timeout=3.0)
+        except Exception:
+            pass
+        time.sleep(7)
+
+        for _ in range(15):
+            try:
+                curr_seq = int(time.time())
+                st, _ = send_signed_request(esp_host, "GET", "/api/v1/system/status", secret_key, sequence=curr_seq, timeout=3.0)
+                heap = st.get('data',{}).get('system',{}).get('freeHeap')
+                if heap:
+                    print(f"[+] ESP online! Free heap: {heap} bytes, DNS: {st.get('data',{}).get('network',{}).get('dns')}")
+                    break
+            except Exception:
+                time.sleep(2)
+
         # Step 3: Trigger OTA Update check
         print(f"\n[3/4] Triggering OTA Update Check...")
         try:
@@ -605,7 +649,7 @@ def run_rescue_flow(
 
         # Step 4: Wait for stream completion and reboot
         print("\n[4/4] Streaming firmware binary directly into ESP flash...")
-        transferred = transfer_complete_event.wait(timeout=75.0)
+        transferred = transfer_complete_event.wait(timeout=120.0)
         if not transferred:
             print("[-] Transfer did not complete within 75s. Verify ESP can reach bridge IP.")
         else:
